@@ -40,20 +40,21 @@
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>rospy</build_depend>
+  <!--  <build_depend>rospy</build_depend>
   <build_depend>rqt_gui</build_depend>
-  <build_depend>rqt_gui_py</build_depend>
+  <build_depend>rqt_gui_py</build_depend> -->
   <run_depend>rospy</run_depend>
   <run_depend>rqt_gui</run_depend>
   <run_depend>rqt_gui_py</run_depend>
+  <run_depend>std_msgs</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
+      <rqt_gui plugin="${prefix}/plugin.xml"/>
     <!-- You can specify that this package is a metapackage here: -->
     <!-- <metapackage/> -->
 
-    <!-- Other tools can request additional information be placed here -->
-
+    <!-- Other tools can request additional information be placed here --> 
   </export>
 </package>
