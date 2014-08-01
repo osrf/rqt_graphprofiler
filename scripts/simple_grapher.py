@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+""" Publishes information about the topology of the network """
 import rospy
 import time
 import copy
