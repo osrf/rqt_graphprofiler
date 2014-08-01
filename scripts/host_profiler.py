@@ -36,8 +36,9 @@ class HostProfiler(object):
 
     def start(self):
         """ Start the HostProfiler """
-        # Get an up-to-date list of the node processes we want to be monitoring
-        self._update_nodes_list() # also starts the _graphupdate_timer
+        # Get an up-to-date list of the node processes we want to be monitoring.
+        # This also starts the _graphupdate_timer at the end when it calls reset()
+        self._update_nodes_list() 
         # First start each nodes individual monitor, then start the publication timer
         for node in self._nodes.values():
             node.start()
@@ -79,10 +80,6 @@ class HostProfiler(object):
             # Send out the data!
             self._publisher.publish(host)
             print "---"
-
-            # Update information about the system state (topology) for use in the
-            # next collection period
-#             self._update_nodes_list()
 
             # Restart all nodes
             for node_monitor in self._nodes.values():
