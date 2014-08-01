@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-import yappi
+# import yappi
 import psutil
 import numpy as np
 from threading import *
+import threading
 import types
 
 import rospy
@@ -28,6 +29,7 @@ class HostProfiler(object):
         self._publisher = rospy.Publisher('/graphprofile',HostProfile, queue_size = 10)
 
         self._publisher_timer = CallbackTimer(1.1,self._publish_profile)
+        self._graphupdate_timer = CallbackTimer(3, self._update_nodes_list)
 
         # Processes we are watching
         self._nodes = dict()
@@ -35,7 +37,7 @@ class HostProfiler(object):
     def start(self):
         """ Start the HostProfiler """
         # Get an up-to-date list of the node processes we want to be monitoring
-        self._update_nodes_list()
+        self._update_nodes_list() # also starts the _graphupdate_timer
         # First start each nodes individual monitor, then start the publication timer
         for node in self._nodes.values():
             node.start()
@@ -45,6 +47,9 @@ class HostProfiler(object):
         """ Stop the HostProfiler """
         # Stop the publisher timer first, since its callback and restart a stopped
         # node monitor.
+        print "%%%%%%%%%%%%%%%%5HOST PROFILER SHUT DOWN%%%%%%%%%%%%%%%%%%"
+        sys.stdout.flush()
+        self._graphupdate_timer.stop()
         self._publisher_timer.stop()
         for node in self._nodes.values():
             node.stop()
@@ -87,63 +92,66 @@ class HostProfiler(object):
 
     def _update_nodes_list(self):
         """ Updates the list of nodes on this machine that we want to collect information about """
-        # Remove Node monitors for processes that no longer exist
-        for name in self._nodes.keys():
-            if not self._nodes[name].is_running():
-                print "Removing Monitor for '%s'"%name
-                self._nodes.pop(name)
+        with self._lock:
+            print "Updating Graph"
+            # Remove Node monitors for processes that no longer exist
+            for name in self._nodes.keys():
+                if not self._nodes[name].is_running():
+                    print "Removing Monitor for '%s'"%name
+                    self._nodes.pop(name)
 
-        # Add node monitors for nodes on this machine we are not already monitoring
-        nodenames = rosnode.get_nodes_by_machine(rosgraph.network.get_host_name())
-        for name in nodenames:
-            if not name in self._nodes:
-                print "Adding Monitor for '%s'"%name
-                node = NodeMonitor()
-                node.name = name
-                try:
-                    # Get the uri
-                    node.uri = self._master.lookupNode(name)
-                except rosgraph.masterapi.MasterError:
-                    print "WARNING: MasterAPI Error"
-                try:
-                    # The the pid
-                    node_api = rosnode.get_api_uri(rospy.get_master(), name)
-                    code, msg, node.pid = xmlrpclib.ServerProxy(node_api[2]).getPid('/NODEINFO')
-                except xmlrpclib.socket.error:
-                    print "WANRING: XML RPC ERROR"
-                # TODO: It would be nice to get the 'type' and 'package' information too
-                self._nodes[name] = node
+            # Add node monitors for nodes on this machine we are not already monitoring
+            nodenames = rosnode.get_nodes_by_machine(rosgraph.network.get_host_name())
+            for name in nodenames:
+                if not name in self._nodes:
+                    print "Adding Monitor for '%s'"%name
+                    node = NodeMonitor()
+                    node.name = name
+                    try:
+                        # Get the uri
+                        node.uri = self._master.lookupNode(name)
+                    except rosgraph.masterapi.MasterError:
+                        print "WARNING: MasterAPI Error"
+                    try:
+                        # The the pid
+                        node_api = rosnode.get_api_uri(rospy.get_master(), name)
+                        code, msg, node.pid = xmlrpclib.ServerProxy(node_api[2]).getPid('/NODEINFO')
+                    except xmlrpclib.socket.error:
+                        print "WANRING: XML RPC ERROR"
+                    # TODO: It would be nice to get the 'type' and 'package' information too
+                    self._nodes[name] = node
 
-        # Get create a monitor for every topic on each node we are monitoring. 
-        # TODO: for each monitor clear the publishers and subscribers list?
-        for node in self._nodes.values():
-            node.published_topics = dict()
-            node.subscribed_topics = dict()
+            # Get create a monitor for every topic on each node we are monitoring. 
+            # TODO: for each monitor clear the publishers and subscribers list?
+            for node in self._nodes.values():
+                node.published_topics = dict()
+                node.subscribed_topics = dict()
 
-        # Compile a dictionary of topic names to types
-        topic_types = dict()
-        for name, type_ in self._master.getTopicTypes():
-            topic_types[name] = type_
+            # Compile a dictionary of topic names to types
+            topic_types = dict()
+            for name, type_ in self._master.getTopicTypes():
+                topic_types[name] = type_
 
-        systemstate = self._master.getSystemState()
-        for topic_name, publisher_list in systemstate[0]:
-            if topic_name in SILENT_TOPICS:
-                continue
-            for publishername in publisher_list:
-                if publishername in self._nodes:
-                    monitor = TopicMonitor()
-                    monitor.topic = topic_name
-                    monitor.type_ = topic_types[topic_name]
-                    self._nodes[publishername].published_topics[topic_name] = monitor
-        for topic_name, subscribers_list in systemstate[1]:
-            if topic_name in SILENT_TOPICS:
-                continue
-            for subscribername in subscribers_list:
-                if subscribername in self._nodes:
-                    monitor = TopicMonitor()
-                    monitor.topic = topic_name
-                    monitor.type_ = topic_types[topic_name]
-                    self._nodes[subscribername].subscribed_topics[topic_name] = monitor
+            systemstate = self._master.getSystemState()
+            for topic_name, publisher_list in systemstate[0]:
+                if topic_name in SILENT_TOPICS:
+                    continue
+                for publishername in publisher_list:
+                    if publishername in self._nodes:
+                        monitor = TopicMonitor()
+                        monitor.topic = topic_name
+                        monitor.type_ = topic_types[topic_name]
+                        self._nodes[publishername].published_topics[topic_name] = monitor
+            for topic_name, subscribers_list in systemstate[1]:
+                if topic_name in SILENT_TOPICS:
+                    continue
+                for subscribername in subscribers_list:
+                    if subscribername in self._nodes:
+                        monitor = TopicMonitor()
+                        monitor.topic = topic_name
+                        monitor.type_ = topic_types[topic_name]
+                        self._nodes[subscribername].subscribed_topics[topic_name] = monitor
+        self._graphupdate_timer.restart()
 
 
     def _topic_statistics_callback(self,data):
@@ -179,6 +187,7 @@ class NodeMonitor(object):
         self.uri = None
         self.pid = None
         self._process = None
+        self._process_ok = True # This gets set to false if we loose the process
         self._interval_timer = CallbackTimer(0.2, self._update_callback)
 
         self.cpu_log = list()
@@ -191,6 +200,10 @@ class NodeMonitor(object):
 
     def start(self):
         """ Start the process monitor """
+        # If the process has died, don't try to restart
+        if not self._process_ok:
+            return
+        # If we have not setup the process - do it now
         if self._process is None:
             try:
                 self._process = psutil.Process(int(self.pid))
@@ -218,6 +231,8 @@ class NodeMonitor(object):
             self._interval_timer.restart()
         except psutil.NoSuchProcess:
             rospy.logerr("WARNING: Lost Node Monitor for '%s'"%self.name)
+            self._process = None
+            self._process_ok = False
 
     def get_profile(self):
         """ Returns a NodeProfile() """
@@ -363,7 +378,7 @@ def sizeof_fmt(num):
 
 
 if __name__ == "__main__":
-    yappi.start()
+#     yappi.start()
     profiler = HostProfiler()
     profiler.start()
     rospy.spin()
@@ -374,5 +389,5 @@ if __name__ == "__main__":
 #     except rospy.ROSInterruptException:
 #         pass
     profiler.stop()
-    yappi.get_func_stats().print_all(columns={0:("name",120), 1:("ncall",5), 2:("tsub", 8), 3:("ttot",8), 4:("tavg",8)})
+#     yappi.get_func_stats().print_all(columns={0:("name",120), 1:("ncall",5), 2:("tsub", 8), 3:("ttot",8), 4:("tavg",8)})
 
