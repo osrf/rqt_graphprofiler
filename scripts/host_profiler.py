@@ -48,8 +48,6 @@ class HostProfiler(object):
         """ Stop the HostProfiler """
         # Stop the publisher timer first, since its callback and restart a stopped
         # node monitor.
-        print "%%%%%%%%%%%%%%%%5HOST PROFILER SHUT DOWN%%%%%%%%%%%%%%%%%%"
-        sys.stdout.flush()
         self._graphupdate_timer.stop()
         self._publisher_timer.stop()
         for node in self._nodes.values():
