@@ -5,6 +5,7 @@ import numpy as np
 from threading import *
 import threading
 import types
+import time
 
 import rospy
 import rosgraph
@@ -56,15 +57,26 @@ class HostProfiler(object):
     def _publish_profile(self):
         """ Publish profile information collected by this host """
         with self._lock:
+            # Populate information collected for each node
+            # Stop All Nodes
+            for node_monitor in self._nodes.values():
+                node_monitor.stop()
+
             # Populate information collected about this host
             host = HostProfile()
             host.hostname = self._hostname
             host.ipaddress = self._ipaddress
 
-            # Populate information collected for each node
-            # Stop All Nodes
-            for node_monitor in self._nodes.values():
-                node_monitor.stop()
+            # Find the earlierst Stop time for all nodes
+            start_times = list() 
+            stop_times = list()
+            for node in self._nodes.values():
+                if node.start_time is not None:
+                    start_times.append(node.start_time)
+                if node.stop_time is not None:
+                    stop_times.append(node.stop_time)
+            host.window_start = min(start_times)
+            host.window_stop = max(stop_times)
 
             print "Publishing %d nodes"%len(self._nodes.values())
             print "Publishing Monitors:",len([node.published_topics for node in self._nodes.values()])
@@ -206,11 +218,13 @@ class NodeMonitor(object):
                 if not isinstance(self.pid,int):
                     raise Exception("PID for process %s not defined"%self.name)
         self.reset()
-        self.start_time = self._interval_timer.start()
+        self._interval_timer.start()
+        self.start_time = rospy.get_rostime()
 
     def stop(self):
         """ Stop the process monitor """
-        self.stop_time = self._interval_timer.stop()
+        self._interval_timer.stop()
+        self.stop_time = rospy.get_rostime()
       
     def is_running(self):
         if self._process is None:
@@ -228,6 +242,7 @@ class NodeMonitor(object):
             rospy.logerr("WARNING: Lost Node Monitor for '%s'"%self.name)
             self._process = None
             self._process_ok = False
+            self.stop_time = time.time()
 
     def get_profile(self):
         """ Returns a NodeProfile() """
