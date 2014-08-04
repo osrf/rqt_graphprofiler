@@ -117,14 +117,13 @@ class HostProfiler(object):
                     try:
                         # Get the uri
                         node.uri = self._master.lookupNode(name)
+                        code, msg, node.pid = xmlrpclib.ServerProxy(node.uri).getPid('/NODEINFO')
                     except rosgraph.masterapi.MasterError:
-                        print "WARNING: MasterAPI Error"
-                    try:
-                        # The the pid
-                        node_api = rosnode.get_api_uri(rospy.get_master(), name)
-                        code, msg, node.pid = xmlrpclib.ServerProxy(node_api[2]).getPid('/NODEINFO')
+                        rospy.logerr("WARNING: MasterAPI Error trying to contact '%s', skipping"%name)
+                        continue
                     except xmlrpclib.socket.error:
-                        print "WANRING: XML RPC ERROR"
+                        rospy.logerr("WANRING: XML RPC ERROR contacting '%s', skipping"%name)
+                        continue
                     # TODO: It would be nice to get the 'type' and 'package' information too
                     self._nodes[name] = node
 
