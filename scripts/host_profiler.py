@@ -93,7 +93,10 @@ class HostProfiler(object):
 
             # Restart all nodes
             for node_monitor in self._nodes.values():
-                node_monitor.start()
+                try:
+                    node_monitor.start()
+                except RuntimeError as e:
+                    rospy.logerr("Exception when starting node monitor '%s': %s"%(node_monitor.name,str(e)))
 
             self.start_time = self._publisher_timer.restart()
 
@@ -105,6 +108,7 @@ class HostProfiler(object):
             for name in self._nodes.keys():
                 if not self._nodes[name].is_running():
                     print "Removing Monitor for '%s'"%name
+                    self._nodes[name].stop()
                     self._nodes.pop(name)
 
             # Add node monitors for nodes on this machine we are not already monitoring
@@ -238,7 +242,7 @@ class NodeMonitor(object):
             self.res_log.append(real)
             self._interval_timer.restart()
         except psutil.NoSuchProcess:
-            rospy.logerr("WARNING: Lost Node Monitor for '%s'"%self.name)
+            rospy.logwarn("Lost Node Monitor for '%s'"%self.name)
             self._process = None
             self._process_ok = False
             self.stop_time = time.time()

@@ -35,7 +35,7 @@ class CallbackTimer(object):
 
     def _start(self):
         if not isinstance(self._timer,types.NoneType):
-            raise Exception("Timer already started")
+            raise RuntimeError("Timer thread already started.")
         self._timer = Timer(self._timeLength, self._callback)
         self._timer.start()
         return time.time()
