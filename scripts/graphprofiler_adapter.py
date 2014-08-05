@@ -86,8 +86,9 @@ class GraphProfileAdapter(BaseAdapter):
             # Discard if the data is too old
             latency = time_now - host.window_stop 
             window = host.window_stop - host.window_start
-            if latency > window:
-                rospy.logerr("Data from '%s' too old"%hostname)
+            if latency > window*2.0:
+                margin = latency-window
+                rospy.logerr("Data from '%s' too old by %f for window size %f"%(hostname,margin.to_sec(),window.to_sec()))
                 continue
             for node in host.nodes:
                 nodeprofiles[node.name] = node
