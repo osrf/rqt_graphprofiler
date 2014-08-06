@@ -23,9 +23,6 @@ class HostProfiler(object):
     """ Collects profile information for this host and the ROS nodes running on it """
     def __init__(self):
         self._host_monitor = HostMonitor()
-#         self._hostname = rosgraph.network.get_host_name()
-#         self._ipaddress = rosgraph.network.get_local_address()
-#         self._cpus_available = multiprocessing.cpu_count()
         rospy.init_node('HostProfiler_%s'%rosgraph.network.get_host_name())
         self._master = rosgraph.Master('HostProfiler_%s'%rosgraph.network.get_host_name())
 
@@ -73,12 +70,6 @@ class HostProfiler(object):
                 node_monitor.stop()
 
             # Populate information collected about this host
-#             host = HostProfile()
-#             host.hostname = self._hostname
-#             host.ipaddress = self._ipaddress
-#             host.cpus_available = self._cpus_available
-#             host.phymem_used = psutil.used_phymem()
-#             host.phymem_avail = psutil.avail_phymem()
             host = self._host_monitor.get_profile()
 
             # Find the earlierst Stop time for all nodes
