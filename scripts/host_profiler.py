@@ -6,6 +6,7 @@ from threading import *
 import threading
 import types
 import time
+import multiprocessing # for multiprocessing.cpu_count()
 
 import rospy
 import rosgraph
@@ -21,12 +22,15 @@ SILENT_TOPICS = ['/graphprofile','/statistics','/tf','/rosout','/rosout_agg']
 class HostProfiler(object):
     """ Collects profile information for this host and the ROS nodes running on it """
     def __init__(self):
-        self._hostname = rosgraph.network.get_host_name()
-        self._ipaddress = rosgraph.network.get_local_address()
+        self._host_monitor = HostMonitor()
+#         self._hostname = rosgraph.network.get_host_name()
+#         self._ipaddress = rosgraph.network.get_local_address()
+#         self._cpus_available = multiprocessing.cpu_count()
         rospy.init_node('HostProfiler_%s'%rosgraph.network.get_host_name())
-        self._master = rosgraph.Master('HostProfiler_%s'%self._hostname)
+        self._master = rosgraph.Master('HostProfiler_%s'%rosgraph.network.get_host_name())
+
         self._lock = Lock()
-        self._subscriber = rospy.Subscriber('/statistics',TopicStatistics, self._topic_statistics_callback)
+        self._topics_subscriber = rospy.Subscriber('/statistics',TopicStatistics, self._topic_statistics_callback)
         self._publisher = rospy.Publisher('/graphprofile',HostProfile, queue_size = 10)
 
         self._publisher_timer = CallbackTimer(1.1,self._publish_profile)
@@ -37,6 +41,10 @@ class HostProfiler(object):
 
     def start(self):
         """ Start the HostProfiler """
+        # Start the host monitor
+        self._host_monitor = HostMonitor()
+        self._host_monitor.start()
+
         # Get an up-to-date list of the node processes we want to be monitoring.
         # This also starts the _graphupdate_timer at the end when it calls reset()
         self._update_nodes_list() 
@@ -53,19 +61,25 @@ class HostProfiler(object):
         self._publisher_timer.stop()
         for node in self._nodes.values():
             node.stop()
+        self._host_monitor.stop()
 
     def _publish_profile(self):
         """ Publish profile information collected by this host """
         with self._lock:
+            self._host_monitor.stop()
             # Populate information collected for each node
             # Stop All Nodes
             for node_monitor in self._nodes.values():
                 node_monitor.stop()
 
             # Populate information collected about this host
-            host = HostProfile()
-            host.hostname = self._hostname
-            host.ipaddress = self._ipaddress
+#             host = HostProfile()
+#             host.hostname = self._hostname
+#             host.ipaddress = self._ipaddress
+#             host.cpus_available = self._cpus_available
+#             host.phymem_used = psutil.used_phymem()
+#             host.phymem_avail = psutil.avail_phymem()
+            host = self._host_monitor.get_profile()
 
             # Find the earlierst Stop time for all nodes
             start_times = list() 
@@ -97,6 +111,10 @@ class HostProfiler(object):
                     node_monitor.start()
                 except RuntimeError as e:
                     rospy.logerr("Exception when starting node monitor '%s': %s"%(node_monitor.name,str(e)))
+
+            # Restart the host monitor
+            self._host_monitor.reset()
+            self._host_monitor.start()
 
             self.start_time = self._publisher_timer.restart()
 
@@ -189,6 +207,60 @@ class HostProfiler(object):
                     monitor = node.subscribed_topics[data.topic]
                     monitor.save_statistics(data)
          
+class HostMonitor(object):
+    """ Tracks cpu and memory information of the host using an internal timing mechanism """
+    def __init__(self):
+        self._interval_timer = CallbackTimer(0.2, self._update_callback)
+        self._hostname = rosgraph.network.get_host_name()
+        self._ipaddress = rosgraph.network.get_local_address()
+        self._cpus_available = multiprocessing.cpu_count()
+
+        self.cpu_load_log = list()
+        self.phymem_used_log = list()
+        self.phymem_avail_log = list()
+
+    def start(self):
+        """ Start monitoring the host"""
+        self._interval_timer.start()
+
+    def stop(self):
+        """ Stop monitoring the host"""
+        self._interval_timer.stop()
+
+    def _update_callback(self):
+        self.cpu_load_log.append(psutil.cpu_percent())
+        self.phymem_used_log.append(psutil.used_phymem())
+        self.phymem_avail_log.append(psutil.avail_phymem())
+        self._interval_timer.restart()
+
+    def get_profile(self):
+        """ Returns a HostProfile() with NO NODE INFORMATION """
+        host = HostProfile()
+        host.hostname = self._hostname
+        host.ipaddress = self._ipaddress
+        host.cpus_available = self._cpus_available
+
+        if len(self.cpu_load_log) > 0:
+            cpu_load_log = np.array(self.cpu_load_log)
+            host.cpu_load_mean = np.mean(cpu_load_log)
+            host.cpu_load_std = np.std(cpu_load_log)
+            host.cpu_load_max = np.max(cpu_load_log)
+        if len(self.phymem_used_log) > 0:
+            phymem_used_log = np.array(self.phymem_used_log)
+            host.phymem_used_mean = np.mean(phymem_used_log)
+            host.phymem_used_std = np.std(phymem_used_log)
+            host.phymem_used_max = np.max(phymem_used_log)
+        if len(self.phymem_avail_log) > 0:
+            phymem_avail_log = np.array(self.phymem_avail_log)
+            host.phymem_avail_mean = np.mean(phymem_avail_log)
+            host.phymem_avail_std = np.std(phymem_avail_log)
+            host.phymem_avail_max = np.max(phymem_avail_log)
+        return host
+
+    def reset(self):
+        self.total_cpu_load_log = list()
+        self.phymem_used_log = list()
+        self.phymem_avail_log = list()
 
 class NodeMonitor(object):
     """ Tracks process statistics of a PID using an internal timing mechanism"""
@@ -251,6 +323,7 @@ class NodeMonitor(object):
         """ Returns a NodeProfile() """
         node = NodeProfile()
         node.name = self.name
+        node.uri = self.uri
         node.pid = self.pid
 
         if len(self.cpu_log) > 0:

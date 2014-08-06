@@ -9,12 +9,16 @@ time window_stop
 
 # Total CPU and Memory used on this machine
 int16 cpus_available
-float32 cpu_total_load_mean
-float32 cpu_total_load_std
-float32 cpu_total_load_max
+float32 cpu_load_mean
+float32 cpu_load_std
+float32 cpu_load_max
 
 # mem_avialable
-int32 mem_total
-float32 mem_percent_used
+float64 phymem_used_mean
+float64 phymem_used_std
+float64 phymem_used_max
+float64 phymem_avail_mean
+float64 phymem_avail_std
+float64 phymem_avail_max
 
 NodeProfile[] nodes
