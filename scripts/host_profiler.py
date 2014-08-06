@@ -38,6 +38,10 @@ class HostProfiler(object):
 
     def start(self):
         """ Start the HostProfiler """
+
+        if not rospy.get_param('/enable_statistics', False):
+            rospy.logerr("Rosparam '/enable_statistics' has not been set to true. No topic statistics will be provided")
+
         # Start the host monitor
         self._host_monitor = HostMonitor()
         self._host_monitor.start()
