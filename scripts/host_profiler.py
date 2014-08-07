@@ -188,19 +188,23 @@ class HostProfiler(object):
             if data.node_pub in self._nodes:
                 node = self._nodes[data.node_pub]
                 if data.topic not in node.published_topics:
-                    rospy.logerr("WARNING: Topic %s not in node %s's publisher list"%(data.topic,data.node_pub))
+                    rospy.logerr("Topic %s not in node %s's publisher list"%(data.topic,data.node_pub))
                 else:
                     monitor = node.published_topics[data.topic]
                     monitor.save_statistics(data)
+            else:
+                rospy.logwarn("Node %s is not currently being monitored."%data.node_pub)
             # If we are monitoring the node that is named as the subscriber, record
             # the data in that NodeMonitors' TopicMonitor for that particular topic.
             if data.node_sub in self._nodes:
                 node = self._nodes[data.node_sub]
                 if data.topic not in node.subscribed_topics:
-                    rospy.logerr("WARNING: Topic %s not in node %s's subscriber list"%(data.topic,data.node_sub))
+                    rospy.logerr("Topic %s not in node %s's subscriber list"%(data.topic,data.node_sub))
                 else:
                     monitor = node.subscribed_topics[data.topic]
                     monitor.save_statistics(data)
+            else:
+                rospy.logwarn("Node %s is not curently being monitored."%data.node_pub)
          
 class HostMonitor(object):
     """ Tracks cpu and memory information of the host using an internal timing mechanism """
