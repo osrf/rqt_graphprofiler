@@ -3,6 +3,8 @@ string type
 
 int32 num_connections
 
+# number of delivered messages during window
+int32 delivered_msgs
 # number of dropped messages during window
 int32 dropped_msgs
 
