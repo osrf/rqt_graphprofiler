@@ -258,7 +258,7 @@ class HostMonitor(object):
         return host
 
     def reset(self):
-        self.total_cpu_load_log = list()
+        self.cpu_load_log = list()
         self.phymem_used_log = list()
         self.phymem_avail_log = list()
 
