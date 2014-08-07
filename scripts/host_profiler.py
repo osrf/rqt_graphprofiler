@@ -377,6 +377,7 @@ class TopicMonitor(object):
         self.num_connections = 0
         self._has_data = False
 
+        self.delivered_msgs = list()
         self.dropped_msgs = list()
         # Observed Traffic, in bytes
         self.traffic = list()
@@ -400,6 +401,7 @@ class TopicMonitor(object):
         assert(isinstance(data, TopicStatistics))
         assert(self.topic == data.topic)
         self._has_data = True
+        self.delivered_msgs.append(data.delivered_msgs)
         self.dropped_msgs.append(data.dropped_msgs)
         self.traffic.append(data.traffic)
         self.period_mean.append(data.period_mean)
@@ -419,6 +421,7 @@ class TopicMonitor(object):
         if not self._has_data:
             return topic
 
+        topic.delivered_msgs = sum(self.delivered_msgs)
         topic.dropped_msgs = sum(self.dropped_msgs)
         topic.traffic = sum(self.traffic)
         mean = np.mean(np.array([d.to_sec() for d in self.period_mean]))
@@ -437,6 +440,7 @@ class TopicMonitor(object):
     def reset(self):
         self.num_connections = 0
         self._has_data = False
+        self.delivered_msgs = list()
         self.dropped_msgs = list()
         self.traffic = list()
         self.period_mean = list()
