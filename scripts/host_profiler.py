@@ -7,6 +7,7 @@ import threading
 import types
 import time
 import multiprocessing # for multiprocessing.cpu_count()
+import math
 
 import rospy
 import rosgraph
@@ -388,12 +389,12 @@ class TopicMonitor(object):
 
         # period between two messages
         self.period_mean = list()
-        self.period_stddev = list()
+        self.period_std = list()
         self.period_max = list()
 
         # age of messages
         self.stamp_age_mean = list()
-        self.stamp_age_stddev = list()
+        self.stamp_age_std = list()
         self.stamp_age_max = list()
 
     @property
@@ -409,10 +410,10 @@ class TopicMonitor(object):
         self.dropped_msgs.append(data.dropped_msgs)
         self.traffic.append(data.traffic)
         self.period_mean.append(data.period_mean)
-        self.period_stddev.append(data.period_stddev)
+        self.period_std.append(data.period_stddev)
         self.period_max.append(data.period_max)
         self.stamp_age_mean.append(data.stamp_age_mean)
-        self.stamp_age_stddev.append(data.stamp_age_stddev)
+        self.stamp_age_std.append(data.stamp_age_stddev)
         self.stamp_age_max.append(data.stamp_age_max)
 
     def get_profile(self):
@@ -425,20 +426,39 @@ class TopicMonitor(object):
         if not self._has_data:
             return topic
 
-        topic.delivered_msgs = sum(self.delivered_msgs)
-        topic.dropped_msgs = sum(self.dropped_msgs)
-        topic.traffic = sum(self.traffic)
-        mean = np.mean(np.array([d.to_sec() for d in self.period_mean]))
-        topic.period_mean = rospy.Duration(mean if not np.isnan(mean) else 0)
-        # topic.period_stddev  
-        max_ = max([d.to_sec() for d in self.period_max])
-        topic.period_max = rospy.Duration(max_ if not np.isnan(max_) else 0)
+        # If we have collected multiple pieces of statistics information, combine them
+        if len(self.delivered_msgs) > 1:
+            topic.delivered_msgs = sum(self.delivered_msgs)
+            topic.dropped_msgs = sum(self.dropped_msgs)
+            topic.traffic = sum(self.traffic)
+            mean = np.mean(np.array([d.to_sec() for d in self.period_mean]))
+            topic.period_mean = rospy.Duration(mean if not np.isnan(mean) else 0)
+            topic.period_std = rospy.Duration(math.sqrt(sum(
+                    [math.pow(sd.to_sec(),2)/n for sd,n in zip(self.period_std, self.delivered_msgs)])))
+            max_ = max([d.to_sec() for d in self.period_max])
+            topic.period_max = rospy.Duration(max_ if not np.isnan(max_) else 0)
 
-        mean = np.mean(np.array([d.to_sec() for d in self.stamp_age_mean]))
-        topic.stamp_age_mean = rospy.Duration(mean if not np.isnan(mean) else 0)
-        # topic.stamp_age_stddev
-        max_ = max([d.to_sec() for d in self.stamp_age_max])
-        topic.stamp_age_max = rospy.Duration(max_ if not np.isnan(max_) else 0)
+            mean = np.mean(np.array([d.to_sec() for d in self.stamp_age_mean]))
+            topic.stamp_age_mean = rospy.Duration(mean if not np.isnan(mean) else 0)
+            # NOTE: This may not be exactly correct. The number of messages received with a stamp_age
+            # might not necessarily be the same as the number of total messages received. 
+            # I am unsure about if this is an ok assumption or not.
+            topic.stamp_age_std = rospy.Duration(math.sqrt(sum(
+                    [math.pow(sd.to_sec(),2)/n for sd,n in zip(self.stamp_age_std, self.delivered_msgs)])))
+            max_ = max([d.to_sec() for d in self.stamp_age_max])
+            topic.stamp_age_max = rospy.Duration(max_ if not np.isnan(max_) else 0)
+        # Otherwise just copy the single message you received
+        elif len(self.delivered_msgs) == 1:
+            topic.delivered_msgs = self.delivered_msgs[0]
+            topic.dropped_msgs = self.dropped_msgs[0]
+            topic.traffic = self.traffic[0]
+            topic.period_mean = self.period_mean[0]
+            topic.period_std = self.period_std[0]
+            topic.period_max = self.period_max[0]
+            topic.stamp_age_mean = self.stamp_age_mean[0]
+            topic.stamp_age_std = self.stamp_age_std[0]
+            topic.stamp_age_max = self.stamp_age_max[0]
+
         return topic
 
     def reset(self):
