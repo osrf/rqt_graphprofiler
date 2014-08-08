@@ -1,6 +1,4 @@
 string name
-string type
-string package
 string uri
 int32 pid
 
