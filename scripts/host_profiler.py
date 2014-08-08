@@ -379,7 +379,6 @@ class TopicMonitor(object):
     def __init__(self):
         self.topic = None
         self.type_ = None
-        self.num_connections = 0
         self._has_data = False
 
         self.delivered_msgs = list()
@@ -458,7 +457,6 @@ class TopicMonitor(object):
         return topic
 
     def reset(self):
-        self.num_connections = 0
         self._has_data = False
         self.delivered_msgs = list()
         self.dropped_msgs = list()
