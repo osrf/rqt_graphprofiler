@@ -48,10 +48,11 @@ class GraphProfileAdapter(BaseAdapter):
     def get_snap_item_attributes(self, snapkey):
         """ Default method for providing some stock settings for snaps """
         attrs = SnapItemViewAttributes()
-        attrs.bgcolor = None
-        attrs.border_color = "red"
+        attrs.bgcolor = "darkCyan" if 'c' in snapkey else "green"
+        attrs.border_color = "darkBlue" if 'c' in snapkey else "darkGreen"
+        attrs.border_width = 1
         attrs.label = ""
-        attrs.label_color = "red"
+        attrs.label_color = "white"
         attrs.width = 20
         return attrs
 
