@@ -26,8 +26,23 @@ class CallbackTimer(object):
         return t
 
     def start(self):
-        with self._lock:
-            return self._start()
+#         with self._lock:
+#             return self._start()
+        has_lock = False
+        print_once = True
+        while not has_lock:
+            has_lock = self._lock.acquire(False)
+            if (not has_lock) and print_once:
+                print_once = False
+                print "*********************************************************"
+                print "*********************************************************"
+                print "*********************************************************"
+                print "Waiting to acquire lock"
+                sys.stdout.flush()
+                time.sleep(0)
+        t = self._start()
+        self._lock.release()
+        return t
 
     def stop(self):
         with self._lock:
@@ -35,7 +50,7 @@ class CallbackTimer(object):
 
     def _start(self):
         if not isinstance(self._timer,types.NoneType):
-            raise RuntimeError("Timer thread already started.")
+            raise RuntimeError("%s thread already started."%(str(type(self._timer))))
         self._timer = Timer(self._timeLength, self._callback)
         self._timer.start()
         return time.time()

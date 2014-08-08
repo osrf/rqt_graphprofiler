@@ -27,11 +27,13 @@ class GraphProfileAdapter(BaseAdapter):
         block = self._topology.blocks[block_index]
         attrs = BlockItemViewAttributes()
         attrs.bgcolor = None
-        attrs.border_color = "red"
+        attrs.border_color = "black"
+        attrs.border_width = 5
         attrs.label = block.vertex.name
         attrs.label_rotation = -90
-        attrs.label_color = "red"
-        attrs.spacerwidth = 20
+        attrs.label_color = "black"
+#         attrs.spacerwidth = block.vertex.
+        attrs.spacerwidth = 30
         return attrs
 
     def get_band_item_attributes(self, band_altitude):
