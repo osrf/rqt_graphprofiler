@@ -7,7 +7,7 @@ import copy
 import rospy
 from rosgraph_msgs.msg import *
 from ros_topology_msgs.msg import *
-from rosprofiler.msg import *
+from ros_statistics_msgs.msg import *
 
 QUIET_NAMES = ['/rosout','/tf']
 
