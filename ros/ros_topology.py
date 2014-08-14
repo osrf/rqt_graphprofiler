@@ -10,7 +10,7 @@
 #   Sink = Subscriber
 #   Source = Publisher
 #
-from topology import *
+from diarc.topology import *
 
 class RosSystemGraph(Topology):
     def __init__(self):
