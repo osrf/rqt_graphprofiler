@@ -1,4 +1,5 @@
 from threading import *
+from diarc import topology
 from diarc.ros import ros_topology as rsg
 from diarc.base_adapter import *
 from diarc.view_attributes import *
