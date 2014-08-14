@@ -32,10 +32,10 @@ def qtview(args):
 def rosview():
     import PyQt4.QtGui
     import qt_view
-    import ros
+    import ros.ros_adapter
     app = PyQt4.QtGui.QApplication([])
     view = qt_view.QtView()
-    adapter = ros.RosAdapter(view)
+    adapter = ros.ros_adapter.RosAdapter(view)
     adapter.update_model()
     view.activateWindow()
     view.raise_()
