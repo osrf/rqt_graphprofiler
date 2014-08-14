@@ -1,0 +1,101 @@
+<topology version="diarc:v2">
+  <vertices height="5" spacing="2">
+  
+    <vertex>
+      <index> 0 </index>
+      <seperation> 10 </seperation>
+      <caption> Node1 </caption>
+      <class> 01 </class>
+      <emitters>
+        <connection>
+          <class> 1 </class>
+          <width> 10 </width>
+        </connection>
+        <connection>
+          <class> 3 </class>
+          <width> 5 </width>
+        </connection>
+      </emitters>
+      <collectors> </collectors>
+    </vertex>
+  
+    <vertex>
+      <index> 1 </index>
+      <seperation> 10 </seperation>
+      <caption> Node2 </caption>
+      <class> 02 </class>
+      <emitters>
+        <connection>
+          <class> 3 </class>
+          <width> 5 </width>
+        </connection>
+      </emitters>
+      <collectors> 
+        <connection>
+          <class> 1 </class>
+          <width> 5 </width>
+        </connection>
+        <connection>
+          <class> 2 </class>
+          <width> 5 </width>
+        </connection>
+      </collectors>
+    </vertex>
+  
+    <vertex>
+      <index> 2 </index>
+      <seperation> 10 </seperation>
+      <caption> Node3 </caption>
+      <class> 03 </class>
+      <emitters>
+        <connection>
+          <class> 2 </class>
+          <width> 5 </width>
+        </connection>
+      </emitters>
+      <collectors>
+        <connection>
+          <class> 1 </class>
+          <width> 5 </width>
+        </connection>
+        <connection>
+          <class> 3 </class>
+          <width> 10 </width>
+        </connection>
+      </collectors>
+    </vertex>
+  
+  </vertices>
+  
+  <edges>
+      <edge>
+          <class> 1 </class>
+          <rank> 1 </rank>
+          <caption> Topic A </caption>
+          <width> 10 </width>
+          <altitudes> 
+              <positive> 1 </positive>
+          </altitudes>
+      </edge>
+  
+      <edge>
+          <class> 2 </class>
+          <rank> 2 </rank>
+          <caption> Topic C </caption>
+          <width> 5 </width>
+          <altitudes> 
+              <negative> -1 </negative>
+          </altitudes>
+      </edge>
+  
+      <edge>
+          <class> 3 </class>
+          <rank> 3 </rank>
+          <caption> Topic B </caption>
+          <width> 10 </width>
+          <altitudes> 
+              <positive> 2 </positive>
+          </altitudes>
+      </edge>
+  </edges>
+</topology>

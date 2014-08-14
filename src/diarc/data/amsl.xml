@@ -1,0 +1,62 @@
+<ros version="ros:v2">
+    <node name="USB_camera_capture" location="" pid="">
+        <topics>
+            <publishes name="/camera/image/compressed" type="sensor_msgs/Image" bw="0" freq="0" />
+            <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="Detectfromjpeg" location="" pid="">
+        <topics>
+            <publishes name="/DetectTargetData" type="Unknown" bw="0" freq="0" />
+            <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+            <subscribes name="/camera/image/compressed" type="sensor_msgs/Image" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="FollowTarget" location="" pid="">
+        <topics>
+            <publishes name="/VelocityFromCam" type="geometry_msgs/Twist" bw="0" freq="0" />
+            <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+            <subscribes name="/DetectTargetData" type="Unknown" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="hokuyo_node" location="" pid="">
+        <topics>
+            <publishes name="/scan" type="sensor_msgs/LaserScan" bw="0" freq="0" />
+            <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="ObstacleAvoidance" location="" pid="">
+        <topics>
+            <publishes name="/VelocityFromLaser" type="geometry_msgs/Twist" bw="0" freq="0"/>
+            <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+            <subscribes name="/scan" type="sensor_msgs/LaserScan" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="integrate" location="" pid="">
+        <topics>
+            <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+            <publishes name="/tinypower/command_velocity" type="geometry_msgs/Twist" bw="0" freq="0"/>
+            <subscribes name="/VelocityFromCam" type="geometry_msgs/Twist" bw="0" freq="0" />
+            <subscribes name="/VelocityFromLaser" type="geometry_msgs/Twist" bw="0" freq="0"/>
+        </topics>
+    </node>
+
+    <node name="Tinypower_server" location="" pid="">
+        <topics>
+            <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+            <subscribes name="/tinypower/command_velocity" type="geometry_msgs/Twist" bw="0" freq="0"/>
+        </topics>
+    </node>
+
+    <node name="rosout" location="" pid="">
+        <topics>
+            <subscribes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+        </topics>
+    </node>
+
+</ros>

@@ -1,0 +1,8 @@
+<launch>
+  <param name="enable_statistics" value="true" />
+  <node name="talker1" pkg="rospy_tutorials" type="talker.py" />
+  <node name="talker2" pkg="roscpp_tutorials" type="talker" />
+  <node name="listener1" pkg="rospy_tutorials" type="listener.py" output="screen"/>
+  <node name="listener2" pkg="roscpp_tutorials" type="listener" />
+</launch>
+

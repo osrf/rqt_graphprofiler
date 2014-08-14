@@ -1,0 +1,20 @@
+<ros version="ros:v1">
+  <node name="joystick" location="192.168.1.2" pid="123" >
+    <topics>
+      <publishes name="velocity" type="geometry_msgs/Twist" />
+      <publishes name="rosout" type="rosgraph_msgs/Log" />
+      <subscribes name="/rosout" type="" />
+    </topics>
+    <services>
+      <provides name="" type="" />
+      <requires name="" type="" />
+    </services>
+  </node>
+  <node name="controller" location="192.168.1.2" pid="123" >
+    <topics>
+        <subscribes name="velocity" type="geometry_msgs/Twist" />
+    </topics>
+  </node>
+  <topic name="velocity" type="geometry_msgs/Twist" bandwidth="150" freq="3" />
+  <topic name="rosout" type="rosgraph_msgs/Log" bandwidth="150" freq="10"/>
+</ros>

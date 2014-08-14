@@ -1,0 +1,5 @@
+<launch>
+  <node name="listener1" pkg="rospy_tutorials" type="listener.py" output="screen" />
+  <node name="listener2" pkg="roscpp_tutorials" type="listener" output="screen"/>
+</launch>
+

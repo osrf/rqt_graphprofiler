@@ -1,0 +1,55 @@
+<ros version="ros:v2">
+    <node name="spawn_teleop_keyboard" location="" pid="">
+        <topics>
+            <publishes name="/cmd_vel" type="geometry_msgs/Twist" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="move_platform" location="" pid="">
+        <topics>
+            <publishes name="/enc" type="std_msgs/Int16" bw="0" freq="0" />
+            <subscribes name="/cmd_vel" type="geometry_msgs/Twist" bw="0" freq="0"/>
+        </topics>
+    </node>
+
+    <node name="tfbroadcaster" location="" pid="">
+        <topics>
+            <publishes name="/tf" type="tf/tfMessage" bw="0" freq="0" />
+            <publishes name="/odom" type="nav_msgs/Odometry" bw="0" freq="0"/>
+            <subscribes name="/tf" type="tf/tfMessage" bw="0" freq="0" />
+            <subscribes name="/enc" type="std_msgs/Int16" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="move_base" location="" pid="">
+        <topics>
+            <publishes name="/cmd_vel" type="geometry_msgs/Twist" bw="0" freq="0" />
+            <publishes name="/move_base/goal" type="move_base_msgs/MoveBaseGoal" bw="0" freq="0" />
+            <subscribes name="/odom" type="nav_msgs/Odometry" bw="0" freq="0"/>
+            <subscribes name="/tf" type="tf/tfMessage" bw="0" freq="0" />
+            <subscribes name="/move_base/goal" type="move_base_msgs/MoveBaseGoal" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="slam_gmapping" location="" pid="">
+        <topics>
+            <publishes name="/tf" type="tf/tfMessage" bw="0" freq="0" />
+            <publishes name="/map" type="map_msgs/OccupancyGridUpdate" bw="0" freq="0" />
+            <subscribes name="/tf" type="tf/tfMessage" bw="0" freq="0" />
+            <subscribes name="/scan" type="sensor_msgs/LaserScan" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="hokuyo_node" location="" pid="">
+        <topics>
+            <publishes name="/scan" type="sensor_msgs/LaserScan" bw="0" freq="0" />
+        </topics>
+    </node>
+
+    <node name="costmap_node" location="" pid="">
+        <topics>
+            <subscribes name="/map" type="map_msgs/OccupancyGridUpdate" bw="0" freq="0" />
+            <subscribes name="/tf" type="tf/tfMessage" bw="0" freq="0" />
+        </topics>
+    </node>
+</ros>

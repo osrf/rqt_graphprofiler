@@ -1,0 +1,36 @@
+<topology version="diarc:v1">
+  <vertices>
+    <vertex index='0' />
+    <vertex index='1' />
+    <vertex index='2' />
+    <vertex index='3' />
+  </vertices>
+  <edges>
+    <edge altitude='1'  >
+      <source> 0 </source>
+      <sink> 1 </sink>
+      <sink> 2 </sink>
+      <sink> 3 </sink>
+    </edge>
+    <edge altitude='3' >
+      <source> 0 </source>
+      <source> 1 </source>
+      <sink> 2 </sink>
+    </edge>
+    <edge altitude='-1' >
+      <source> 3 </source>
+      <source> 2 </source>
+      <sink> 1 </sink>
+    </edge>
+    <edge altitude='2' >
+      <source> 2 </source>
+      <sink> 3 </sink>
+    </edge>
+    <edge altitude='-2' >
+      <source> 2 </source>
+      <source> 3 </source>
+      <sink> 0 </sink>
+      <sink> 1 </sink>
+    </edge>
+  </edges>
+</topology>

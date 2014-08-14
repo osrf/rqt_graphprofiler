@@ -1,0 +1,41 @@
+<ros version="ros:v2">
+  <node name="Gscam" location="192.168.1.2" pid="123" >
+    <topics>
+      <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+      <publishes name="/gscam/camera_info" type="sensor_msgs/CameraInfo" bw="0" freq="0"/>
+      <publishes name="/gscam/image_raw" type="sensor_msgs/Image" bw="0" freq="0"/>
+    </topics>
+  </node>
+
+  <node name="/image_proc" location="192.168.1.2" pid="1234">
+    <topics>
+      <publishes name="/image_mono" type="sensor_msgs/Image" bw="0" freq="0" />
+      <publishes name="/image_rect" type="sensor_msgs/Image" bw="0" freq="0" />
+      <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+      <subscribes name="/gscam/camera_info" type="sensor_msgs/CameraInfo" bw="0" freq="0"/>
+      <subscribes name="/gscam/image_raw" type="sensor_msgs/Image" bw="0" freq="0"/>
+      <subscribes name="/image_mono" type="sensor_msgs/Image" bw="0" freq="0" />
+    </topics>
+  </node>
+
+  <node name="/image_view_raw" location="192.168.1.2" pid="123" >
+    <topics>
+      <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+      <subscribes name="/image_mono" type="sensor_msgs/Image" bw="0" freq="0"/>
+    </topics>
+  </node>
+
+  <node name="/image_view_rect" location="192.168.1.2" pid="123" >
+    <topics>
+      <publishes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+      <subscribes name="/image_rect" type="sensor_msgs/Image" bw="0" freq="0" />
+    </topics>
+  </node>
+
+  <node name="/rosout" location="" pid="">
+      <topics>
+          <subscribes name="/rosout" type="rosgraph_msgs/Log" bw="0" freq="0" />
+      </topics>
+  </node>
+
+</ros>
