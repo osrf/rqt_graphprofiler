@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import PyQt4.QtGui
-import qt_view
+from diarc import *
 # import graphprofiler_adapter
 import rosprofiler_adapter
 import rospy

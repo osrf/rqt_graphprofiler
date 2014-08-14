@@ -1,7 +1,7 @@
 from threading import *
-from base_adapter import *
-import ros_topology as rsg
-from view_attributes import *
+from diarc.ros import ros_topology as rsg
+from diarc.base_adapter import *
+from diarc.view_attributes import *
 import copy
 
 import rospy
