@@ -2,9 +2,9 @@ import rosgraph
 import rosnode
 QUIET_NAMES = ['/rosout','/tf']
 
-from base_adapter import *
+from diarc.base_adapter import *
 from ros_topology import *
-from view_attributes import *
+from diarc.view_attributes import *
 
 
 class RosAdapter(BaseAdapter):

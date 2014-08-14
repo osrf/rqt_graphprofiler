@@ -1,6 +1,6 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from util import *
+from diarc.util import *
 import sys
 
 

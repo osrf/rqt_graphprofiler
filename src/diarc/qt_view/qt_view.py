@@ -1,13 +1,26 @@
-from view_attributes import *
-from snapkey import *
-from util import *
-from SpacerContainer import *
+#from diarc import view_attributes
+#BandItemViewAttributes = view_attributes.BandItemViewAttributes
+#from view_attributes import BlockItemViewAttributes
+#from view_attributes import SnapItemViewAttributes
+# import sys
+# import os
+# old_path = sys.path
+# new_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# print(new_path)
+# sys.path.insert(0, new_path)
+# import diarc
+# diarc = reload(diarc)
+from diarc.view_attributes import *
+from diarc.snapkey import *
+from diarc.util import *
+from diarc.view import *
+from .SpacerContainer import *
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from view import *
 import types
 import json
 import sys
+# sys.path = old_path
 
 class BandStack(SpacerContainer):
     def __init__(self, parent):
