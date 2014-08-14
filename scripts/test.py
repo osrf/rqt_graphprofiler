@@ -5,6 +5,7 @@ import qt_view
 import rosprofiler_adapter
 import rospy
 import sys
+sys.dont_write_bytecode = True
 
 if __name__ == '__main__':
     rospy.init_node('test')
