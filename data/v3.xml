@@ -1,0 +1,50 @@
+<topology version="diarc:v3">
+  <vertices>
+    <vertex index='0'>
+      <collectors>
+        <collector order='0' altitude='-1' />
+      </collectors>
+      <emitters>
+        <emitter order='0' altitude='1' />
+        <emitter order='1' altitude='3' />
+      </emitters>
+    </vertex>
+    <vertex index='1'>
+      <collectors>
+        <collector order='0' altitude='1' />
+        <collector order='2' altitude='-1' />
+        <collector order='1' altitude='-2' />
+      </collectors>
+      <emitters>
+        <emitter order='0' altitude='3' />
+      </emitters>
+    </vertex>
+    <vertex index='2'>
+      <collectors>
+        <collector order='0' altitude='1' />
+        <collector order='1' altitude='3' />
+      </collectors>
+      <emitters>
+        <emitter order='0' altitude='2' />
+        <emitter order='0' altitude='-2' />
+        <emitter order='1' altitude='-1' />
+      </emitters>
+    </vertex>
+    <vertex index='3'>
+      <collectors>
+        <collector order='0' altitude='1' />
+        <collector order='1' altitude='2' />
+      </collectors>
+      <emitters>
+        <emitter order='0' altitude='-1' />
+      </emitters>
+    </vertex>
+  </vertices>
+  <edges>
+    <edge altitude='1' rank='0' />
+    <edge altitude='3' rank='1' />
+    <edge altitude='-1' rank='2'/>
+    <edge altitude='2' rank='3' />
+    <edge altitude='-2' rank='3' />
+  </edges>
+</topology>

@@ -1,0 +1,5 @@
+<launch>
+  <node name="talker1" pkg="rospy_tutorials" type="talker.py" output="screen"/>
+  <node name="talker2" pkg="roscpp_tutorials" type="talker" output="screen"/>
+</launch>
+

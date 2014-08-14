@@ -1,0 +1,50 @@
+<topology>
+  <vertices>
+    <vertex index='0'>
+      <collector>
+        <sink order='0' altitude='-1' />
+      </collector>
+      <emitter>
+        <source order='0' altitude='1' />
+        <source order='1' altitude='3' />
+      </emitter>
+    </vertex>
+    <vertex index='1'>
+      <collector>
+        <sink order='0' altitude='1' />
+        <sink order='1' altitude='-1' />
+        <sink order='2' altitude='-2' />
+      </collector>
+      <emitter>
+        <source order='0' altitude='3' />
+      </emitter>
+    </vertex>
+    <vertex index='2'>
+      <collector>
+        <sink order='0' altitude='1' />
+        <sink order='1' altitude='3' />
+      </collector>
+      <emitter>
+        <source order='0' altitude='2' />
+        <source order='0' altitude='-2' />
+        <source order='1' altitude='-1' />
+      </emitter>
+    </vertex>
+    <vertex index='3'>
+      <collector>
+        <sink order='0' altitude='1' />
+        <sink order='1' altitude='2' />
+      </collector>
+      <emitter>
+        <source order='0' altitude='-1' />
+      </emitter>
+    </vertex>
+  </vertices>
+  <edges>
+    <edge altitude='1' rank='0' />
+    <edge altitude='3' rank='1' />
+    <edge altitude='-1' rank='2'/>
+    <edge altitude='2' rank='3' />
+    <edge altitude='-2' rank='3' />
+  </edges>
+</topology>

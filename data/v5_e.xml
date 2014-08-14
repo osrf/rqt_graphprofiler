@@ -1,0 +1,53 @@
+<?ignore
+
+     .-------.---------------.-------.
+    |         |             |         |
++-+-A-+     +-V-+-+     +-+-A-+     +-V-+-+
+| |   |     |   | |     | |   |     |   | |
++-+---+     +-A-+-+     +-+-V-+     +---+-+
+              |             |
+               '-----------'
+
+?>
+<topology version="diarc:v5">
+    <vertices>
+        <vertex index='0'>
+            <collector>
+            </collector>
+            <emitter>
+                <source order='0' edge='0' />
+            </emitter>
+        </vertex>
+
+        <vertex index='1'>
+            <collector>
+                <sink order='0' edge='0' />
+            </collector>
+            <emitter>
+            </emitter>
+        </vertex>
+
+        <vertex index='2'>
+            <collector>
+            </collector>
+            <emitter>
+                <source order='0' edge='0' />
+            </emitter>
+        </vertex>
+
+        <vertex index='3'>
+            <collector>
+                <sink order='0' edge='0' />
+            </collector>
+            <emitter>
+            </emitter>
+        </vertex>
+
+    </vertices>
+    <edges>
+        <edge id='0'>
+            <band altitude='1' rank='0' />
+            <band altitude='-1' rank='0' />
+        </edge>
+    </edges>
+</topology>
