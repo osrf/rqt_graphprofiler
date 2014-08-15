@@ -4,9 +4,12 @@
             ROS Graph Profiler Visualization Tool.
         </description>
         <qtgui>
-            <label> Ros Graph Profiler </label>
+            <group>
+                <label>Introspection</label>
+            </group>
+            <label>Graph Profiler</label>
             <icon type="theme">system-help</icon>
-            <statustip> Graph Profiler </statustip>
+            <statustip>Graph Profiler</statustip>
         </qtgui>
     </class>
 </library>

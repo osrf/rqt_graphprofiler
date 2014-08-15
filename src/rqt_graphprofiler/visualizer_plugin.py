@@ -22,10 +22,8 @@ class VisualizerPlugin(Plugin):
                         dest="quiet", help="Put plugin in silent mode")
         args, unknowns = parser.parse_known_args(context.argv())
 
-        # Create QWidget
-#         self._widget = QWidget()
-#         context.add_widget(self._widget)
         self._view = qt_view.QtView()
+        self._view.setWindowTitle('Graph Profiler')
         self._adapter = rosprofiler_adapter.ROSProfileAdapter(self._view)
         context.add_widget(self._view)
 
