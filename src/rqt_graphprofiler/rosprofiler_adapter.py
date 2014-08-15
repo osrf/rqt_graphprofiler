@@ -1,11 +1,11 @@
 from threading import *
 from diarc import topology
-from diarc.ros import ros_topology as rsg
 from diarc.base_adapter import *
 from diarc.view_attributes import *
 import copy
 
 import rospy
+import ros_topology as rsg
 from rosgraph_msgs.msg import *
 from ros_topology_msgs.msg import *
 from ros_statistics_msgs.msg import *
