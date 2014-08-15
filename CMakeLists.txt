@@ -103,8 +103,9 @@ catkin_package(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-  scripts/test.py
-  scripts/rosprofiler_adapter.py
+#   scripts/test.py
+#   scripts/rosprofiler_adapter.py
+  scripts/rqt_graphprofiler
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -123,11 +124,10 @@ install(PROGRAMS
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(FILES
+  plugin.xml
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
 
 #############
 ## Testing ##

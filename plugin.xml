@@ -1,0 +1,12 @@
+<library path="src">
+    <class name="VisualizerPlugin" type="rqt_graphprofiler.visualizer_plugin.VisualizerPlugin" base_class_type="rqt_gui_py::Plugin">
+        <description>
+            ROS Graph Profiler Visualization Tool.
+        </description>
+        <qtgui>
+            <label> Ros Graph Profiler </label>
+            <icon type="theme">system-help</icon>
+            <statustip> Graph Profiler </statustip>
+        </qtgui>
+    </class>
+</library>
