@@ -268,6 +268,7 @@ class BaseAdapter(Adapter):
             for snap in emitter.values() + collector.values():
                 order = snap.order
                 containername = "emitter" if snap.isSource() else "collector"
+                # TODO: This assertion check should be commented out eventually
                 if not snap.isUsed():
                     items = [item for item in self._view.layout_manager._snap_items if item.snap_order == order]
                     items = [item for item in items if item.container.strType() == containername]
