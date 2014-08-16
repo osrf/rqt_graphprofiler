@@ -1,23 +1,13 @@
-#from diarc import view_attributes
-#BandItemViewAttributes = view_attributes.BandItemViewAttributes
-#from view_attributes import BlockItemViewAttributes
-#from view_attributes import SnapItemViewAttributes
-# import sys
-# import os
-# old_path = sys.path
-# new_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-# print(new_path)
-# sys.path.insert(0, new_path)
-# import diarc
-# diarc = reload(diarc)
-from diarc.view_attributes import *
-from diarc.snapkey import *
-from diarc.util import *
-from diarc.view import *
-from .SpacerContainer import *
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-import types
+from PyQt4.QtCore import Qt, QMimeData
+from PyQt4.QtGui import QPen, QColor, QSizePolicy, QDrag, QBrush, QGraphicsWidget
+from PyQt4.QtGui import QGraphicsView, QGraphicsAnchorLayout, QGraphicsScene
+from PyQt4.QtCore import pyqtSignal as Signal
+
+from diarc.view_attributes import BlockItemViewAttributes, BandItemViewAttributes, SnapItemViewAttributes
+from diarc.snapkey import gen_snapkey, parse_snapkey
+from diarc.util import typecheck, TypedDict
+from diarc.view import View
+from .SpacerContainer import SpacerContainer
 import json
 import sys
 # sys.path = old_path
@@ -574,7 +564,6 @@ class SnapSpacer(SpacerContainer.Spacer):
     def link(self):
         l = self.parent.parent.layout()
         # If you have a snap to your left, connect
-        target = None
         if self.leftSnap:
             l.addAnchor(self, Qt.AnchorLeft, self.leftSnap, Qt.AnchorRight)
             l.addAnchor(self, Qt.AnchorTop, self.leftSnap, Qt.AnchorTop)
@@ -903,13 +892,16 @@ class LayoutManagerWidget(QGraphicsWidget):
         item = self._band_items[altitude]
         item.top_band = self._band_items[top_band_alt] if top_band_alt is not None else None
         item.bot_band = self._band_items[bot_band_alt] if bot_band_alt is not None else None
-        item.left_most_snap = self._snap_items[leftmost_snapkey]
-        item.right_most_snap = self._snap_items[rightmost_snapkey]
+        item.left_most_snap = self._snap_items[str(leftmost_snapkey)]
+        item.right_most_snap = self._snap_items[str(rightmost_snapkey)]
 
     def set_band_item_attributes(self, altitude, attrs):
         self._band_items[altitude].set_attributes(attrs)
 
     def add_snap_item(self, snapkey):
+        # snapkey gets passed as a QString automatically since it goes across
+        # a signal/slot interface
+        snapkey = str(snapkey)
         print "... Adding SnapItem %s"%snapkey
         if snapkey in self._snap_items:
             raise DuplicateItemExistsError("SnapItem with snapkey %s already exists"%(snapkey))
@@ -918,6 +910,9 @@ class LayoutManagerWidget(QGraphicsWidget):
         return item
 
     def remove_snap_item(self, snapkey):
+        # snapkey gets passed as a QString automatically since it goes across
+        # a signal/slot interface
+        snapkey = str(snapkey)
         print "... Removing SnapItem %s"%snapkey
         self._snap_items[snapkey].release()
         self._snap_items.pop(snapkey)
@@ -926,9 +921,15 @@ class LayoutManagerWidget(QGraphicsWidget):
         return True if snapkey in self._snap_items else False
 
     def get_snap_items(self, snapkey):
+        # snapkey gets passed as a QString automatically since it goes across
+        # a signal/slot interface
+        snapkey = str(snapkey)
         return self._snap_item[snapkey]
 
     def set_snap_item_settings(self, snapkey, left_order, right_order, pos_band_alt, neg_band_alt):
+        # snapkey gets passed as a QString automatically since it goes across
+        # a signal/slot interface
+        snapkey = str(snapkey)
         item = self._snap_items[snapkey]
         if left_order is not None:
             left_snapkey = gen_snapkey(item.block_index,item.container.strType(),left_order)
@@ -944,6 +945,9 @@ class LayoutManagerWidget(QGraphicsWidget):
         item.negBandItem = self._band_items[neg_band_alt] if neg_band_alt is not None else None
 
     def set_snap_item_attributes(self, snapkey, attributes):
+        # snapkey gets passed as a QString automatically since it goes across
+        # a signal/slot interface
+        snapkey = str(snapkey)
         self._snap_items[snapkey].set_attributes(attributes)
 
     def view(self):
@@ -997,6 +1001,27 @@ class QtView(QGraphicsView, View):
     which we draw the topology. 
     It also implements the View interface as a passthrough to the LayoutManager.
     """
+    # Qt Signals. The following signals correspond to diarc.View() API calls that
+    # are called from outside the main qt thread. Rather then call the implementations
+    # defined in layout_manager directly, we call them from these signals so that
+    # the call happens from the correct thread.
+    __update_view_signal = Signal()
+
+    __add_block_item_signal = Signal(int)
+    __remove_block_item_signal = Signal(int)
+    __set_block_item_settings_signal = Signal(int, object, object)
+    __set_block_item_attributes_signal = Signal(int, BlockItemViewAttributes)
+
+    __add_band_item_signal = Signal(int, int)
+    __remove_band_item_signal = Signal(int)
+    __set_band_item_settings_signal = Signal(int, int, object, object, str, str)
+    __set_band_item_attributes_signal = Signal(int, BandItemViewAttributes)
+
+    __add_snap_item_signal = Signal(str)
+    __remove_snap_item_signal = Signal(str)
+    __set_snap_item_settings_signal = Signal(str, object, object, object, object)
+    __set_snap_item_attributes_signal = Signal(str, SnapItemViewAttributes)
+
     def __init__(self):
         super(QtView, self).__init__(None)
         View.__init__(self)
@@ -1012,64 +1037,74 @@ class QtView(QGraphicsView, View):
         self.layout_manager = LayoutManagerWidget(self)
         self.scene().addItem(self.layout_manager)
 
+        # Hook up the signals and slots
+        self.__update_view_signal.connect(self.layout_manager.link)
+        self.__add_block_item_signal.connect(self.layout_manager.add_block_item)
+        self.__remove_block_item_signal.connect(self.layout_manager.remove_block_item)
+        self.__set_block_item_settings_signal.connect(self.layout_manager.set_block_item_settings)
+        self.__set_block_item_attributes_signal.connect(self.layout_manager.set_block_item_attributes)
+        self.__add_band_item_signal.connect(self.layout_manager.add_band_item)
+        self.__remove_band_item_signal.connect(self.layout_manager.remove_band_item)
+        self.__set_band_item_settings_signal.connect(self.layout_manager.set_band_item_settings)
+        self.__set_band_item_attributes_signal.connect(self.layout_manager.set_band_item_attributes)
+        self.__add_snap_item_signal.connect(self.layout_manager.add_snap_item)
+        self.__remove_snap_item_signal.connect(self.layout_manager.remove_snap_item)
+        self.__set_snap_item_settings_signal.connect(self.layout_manager.set_snap_item_settings)
+        self.__set_snap_item_attributes_signal.connect(self.layout_manager.set_snap_item_attributes)
         self.resize(1024,768)
         self.show()
 
     def update_view(self):
-        self.layout_manager.link()
+        self.__update_view_signal.emit()
 
     def add_block_item(self, index):
         """ Allows the adapter to create a new BlockItem """
-        return self.layout_manager.add_block_item(index)
+        self.__add_block_item_signal.emit(index)
 
     def has_block_item(self, index):
         return self.layout_manager.has_block_item(index)
 
     def remove_block_item(self, index):
-        return self.layout_manager.remove_block_item(index)
+        self.__remove_block_item_signal.emit(index)
 
     def set_block_item_settings(self, index, left_index, right_index):
-        return self.layout_manager.set_block_item_settings(index, left_index, right_index)
+        return self.__set_block_item_settings_signal.emit(index, left_index, right_index)
 
     def set_block_item_attributes(self, index, attributes):
-        return self.layout_manager.set_block_item_attributes(index, attributes)
+        self.__set_block_item_attributes_signal.emit(index, attributes)
 
     def add_band_item(self, altitude, rank):
         """ Create a new drawable object to correspond to a Band. """
-        return self.layout_manager.add_band_item(altitude, rank)
+        self.__add_band_item_signal.emit(altitude, rank)
 
     def has_band_item(self, altitude):
         return self.layout_manager.has_band_item(altitude)
 
     def remove_band_item(self, altitude):
         """ Remove the drawable object to correspond to a band """ 
-        return self.layout_manager.remove_band_item(altitude)
+        self.__remove_band_item_signal.emit(altitude)
 
     def set_band_item_settings(self, altitude, rank, top_band_alt, bot_band_alt,
                                 leftmost_snapkey, rightmost_snapkey):
-
-        return self.layout_manager.set_band_item_settings(
-                    altitude, rank, top_band_alt, bot_band_alt, 
-                    leftmost_snapkey, rightmost_snapkey)
+        self.__set_band_item_settings_signal.emit(altitude, rank, top_band_alt, bot_band_alt, leftmost_snapkey, rightmost_snapkey)
 
     def set_band_item_attributes(self, altitude, attributes):
-        return self.layout_manager.set_band_item_attributes(altitude, attributes)
+        self.__set_band_item_attributes_signal.emit(altitude, attributes)
 
     def add_snap_item(self, snapkey):
-        return self.layout_manager.add_snap_item(snapkey)
+        self.__add_snap_item_signal.emit(snapkey)
 
     def has_snap_item(self, snapkey):
         return self.layout_manager.has_snap_item(snapkey)
 
     def remove_snap_item(self, snapkey): 
-        return self.layout_manager.remove_snap_item(snapkey)
+        self.__remove_snap_item_signal.emit(snapkey)
 
     def set_snap_item_settings(self, snapkey, left_order, right_order, pos_band_alt, neg_band_alt):
-        return self.layout_manager.set_snap_item_settings(
-                snapkey, left_order, right_order, pos_band_alt, neg_band_alt)
+        self.__set_snap_item_settings_signal.emit(snapkey, left_order, right_order, pos_band_alt, neg_band_alt)
 
     def set_snap_item_attributes(self, snapkey, attributes):
-        return self.layout_manager.set_snap_item_attributes(snapkey, attributes)
+        self.__set_snap_item_attributes_signal.emit(snapkey, attributes)
 
     def wheelEvent(self,event):
         """ Implements scrollwheel zooming """
