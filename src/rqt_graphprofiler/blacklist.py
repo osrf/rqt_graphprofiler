@@ -15,6 +15,7 @@ from python_qt_binding.QtGui import QListView
 from python_qt_binding.QtGui import QPushButton
 from python_qt_binding.QtGui import QStringListModel
 from python_qt_binding.QtGui import QVBoxLayout
+from python_qt_binding.QtGui import QIcon
 
 
 class BlacklistDialog(QDialog):
@@ -32,8 +33,8 @@ class BlacklistDialog(QDialog):
         vbox.addWidget(self._blacklist)
 
         controls_layout = QHBoxLayout()
-        add_button = QPushButton("+")
-        rem_button = QPushButton("-")
+        add_button = QPushButton(icon=QIcon.fromTheme('list-add'))
+        rem_button = QPushButton(icon=QIcon.fromTheme('list-remove'))
         ok_button = QPushButton("Ok")
         cancel_button = QPushButton("Cancel")
         add_button.clicked.connect(self._add_item)
@@ -101,6 +102,7 @@ class Blacklist(QListView):
         self._list = self._model.stringList()
         self._list.append(val)
         self._model.setStringList(self._list)
+        self._selected_index = None
 
     def remove_selected(self):
         """ removes any selected value from the list """
@@ -108,6 +110,7 @@ class Blacklist(QListView):
             self._list = self._model.stringList()
             self._list.pop(self._selected_index)
             self._model.setStringList(self._list)
+            self._selected_index = None
 
     def get_values(self):
         """ returns the values stored in the list """
