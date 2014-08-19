@@ -6,6 +6,7 @@ from python_qt_binding.QtGui import QWidget
 from python_qt_binding.QtGui import QVBoxLayout
 from python_qt_binding.QtGui import QHBoxLayout
 from python_qt_binding.QtGui import QPushButton
+from python_qt_binding.QtGui import QCheckBox
 
 import rospy
 import rosprofiler_adapter
@@ -51,12 +52,18 @@ class VisualizerWidget(QWidget):
 
         toolbar_layout = QHBoxLayout()
         refresh_button = QPushButton("Refresh")
-
+        auto_refresh_checkbox = QCheckBox("Auto Refresh")
         topic_blacklist_button = QPushButton("Topic Blacklist")
-        topic_blacklist_button.clicked.connect(self._edit_topic_blacklist)
         node_blacklist_button = QPushButton("Node Blacklist")
+
+        refresh_button.clicked.connect(self._refresh)
+        topic_blacklist_button.clicked.connect(self._edit_topic_blacklist)
         node_blacklist_button.clicked.connect(self._edit_node_blacklist)
+        auto_refresh_checkbox.setCheckState(2)
+        auto_refresh_checkbox.stateChanged.connect(self._autorefresh_changed)
+
         toolbar_layout.addWidget(refresh_button)
+        toolbar_layout.addWidget(auto_refresh_checkbox)
         toolbar_layout.addWidget(topic_blacklist_button)
         toolbar_layout.addWidget(node_blacklist_button)
         vbox.addLayout(toolbar_layout)
@@ -73,11 +80,25 @@ class VisualizerWidget(QWidget):
         topics = self._adapter.get_topic_quiet_list()
         topic_blacklist = BlacklistDialog.get_blacklist(values=topics)
         self._adapter.set_topic_quiet_list(topic_blacklist)
-        self._adapter._topology_update()
+        self._adapter.topology_update()
         
     def _edit_node_blacklist(self):
         """ Opens node blacklist Dialog and modifies the blacklist """
         nodes = self._adapter.get_node_quiet_list()
         node_blacklist = BlacklistDialog.get_blacklist(values=nodes)
         self._adapter.set_node_quiet_list(node_blacklist)
-        self._adapter._topology_update()
+        self._adapter.topology_update()
+
+    def _autorefresh_changed(self, value):
+        if value == 2:
+            print "Enabling Autorefresh"
+            self._adapter.enable_auto_update()
+            self._refresh()
+        elif value == 0:
+            print "Disabling Autorefresh"
+            self._adapter.disable_auto_update()
+        else:
+            raise Exception()
+
+    def _refresh(self):
+        self._adapter.topology_update()
