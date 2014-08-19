@@ -7,9 +7,9 @@ sys.dont_write_bytecode = True
 import inspect
 
 def asciiview(args):
-    import parser
-    import ascii_view
-    import base_adapter
+    from diarc import parser
+    from ascii_view import ascii_view
+    from diarc import base_adapter
     topology = parser.parseFile(args[0])
     view = ascii_view.AsciiView()
     adapter = base_adapter.BaseAdapter(topology, view)
@@ -17,9 +17,9 @@ def asciiview(args):
 
 def qtview(args):
     import PyQt4.QtGui
-    import parser
-    import qt_view
-    import base_adapter
+    from diarc import parser
+    from qt_view import qt_view
+    from diarc import base_adapter
     topology = parser.parseFile(args[0])
     app = PyQt4.QtGui.QApplication(sys.argv)
     view = qt_view.QtView()
