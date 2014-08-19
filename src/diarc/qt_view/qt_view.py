@@ -3,14 +3,93 @@ from PyQt4.QtGui import QPen, QColor, QSizePolicy, QDrag, QBrush, QGraphicsWidge
 from PyQt4.QtGui import QGraphicsView, QGraphicsAnchorLayout, QGraphicsScene
 from PyQt4.QtCore import pyqtSignal as Signal
 
-from diarc.view_attributes import BlockItemViewAttributes, BandItemViewAttributes, SnapItemViewAttributes
 from diarc.snapkey import gen_snapkey, parse_snapkey
 from diarc.util import typecheck, TypedDict
 from diarc.view import View
+from diarc.view import BlockItemAttributes
+from diarc.view import BandItemAttributes
+from diarc.view import SnapItemAttributes
 from .SpacerContainer import SpacerContainer
 import json
 import sys
-# sys.path = old_path
+
+class QtBlockItemAttributes(BlockItemAttributes):
+    def __init__(self):
+        BlockItemAttributes.__init__(self)
+        self.__bgcolor = "black"
+        self.__border_color = "black"
+        self.__label_color = "black"
+        self.border_width = 1
+    @property
+    def bgcolor(self):
+        return QColor(self.__bgcolor)
+    @bgcolor.setter
+    def bgcolor(self, value):
+        self.__bgcolor = value
+    @property
+    def border_color(self):
+        return QColor(self.__border_color)
+    @border_color.setter
+    def border_color(self, value):
+        self.__border_color = value
+    @property
+    def label_color(self):
+        return QColor(self.__label_color)
+    @label_color.setter
+    def label_color(self, value):
+        self.__label_color = value
+
+class QtBandItemAttributes(BandItemAttributes):
+    def __init__(self):
+        BandItemAttributes.__init__(self)
+        self._bgcolor = "black"
+        self._border_color = "black"
+        self._label_color = "black"
+    @property
+    def bgcolor(self):
+        return QColor(self._bgcolor)
+    @bgcolor.setter
+    def bgcolor(self, value):
+        self._bgcolor = value
+    @property
+    def border_color(self):
+        return QColor(self._border_color)
+    @border_color.setter
+    def border_color(self, value):
+        self._border_color = value
+    @property
+    def label_color(self):
+        return QColor(self._label_color)
+    @label_color.setter
+    def label_color(self, value):
+        self._label_color = value
+
+class QtSnapItemAttributes(SnapItemAttributes):
+    def __init__(self):
+        SnapItemAttributes.__init__(self)
+        self._bgcolor = "white"
+        self._border_color = "black"
+        self._label_color = "black"
+    @property
+    def bgcolor(self):
+        return QColor(self._bgcolor)
+    @bgcolor.setter
+    def bgcolor(self, value):
+        self._bgcolor = value
+    @property
+    def border_color(self):
+        return QColor(self._border_color)
+    @border_color.setter
+    def border_color(self, value):
+        self._border_color = value
+    @property
+    def label_color(self):
+        return QColor(self._label_color)
+    @label_color.setter
+    def label_color(self, value):
+        self._label_color = value
+
+
 
 class BandStack(SpacerContainer):
     def __init__(self, parent):
@@ -136,13 +215,13 @@ class BandSpacer(SpacerContainer.Spacer):
             painter.setPen(Qt.NoPen)
         painter.drawRect(self.rect())
 
-class BandItem(SpacerContainer.Item, BandItemViewAttributes):
+class BandItem(SpacerContainer.Item, QtBandItemAttributes):
     def __init__(self, parent, altitude, rank):
         self._layout_manager = typecheck(parent, LayoutManagerWidget, "parent")
         self._view = parent.view()
         self._adapter = parent.adapter()
         super(BandItem,self).__init__(parent,parent.bandStack)
-        BandItemViewAttributes.__init__(self)
+        QtBandItemAttributes.__init__(self)
 
         # Band properties - these must be kept up to date with topology
         self.altitude = altitude
@@ -184,11 +263,8 @@ class BandItem(SpacerContainer.Item, BandItemViewAttributes):
     def set_attributes(self, attrs):
         """ Applies a set of BandItemViewAttributes to this object. Transforms 
         some values such as color into qt specific values. """
-        typecheck(attrs, BandItemViewAttributes, "attrs")
-        self._copy_attributes(attrs)
-        self.bgcolor = QColor(attrs.bgcolor)
-        self.border_color = QColor(attrs.border_color)
-        self.label_color = QColor(attrs.label_color)
+        typecheck(attrs, BandItemAttributes, "attrs")
+        self.copy_attributes(attrs)
         self.set_width(self.width)
         self.update(self.rect())
 
@@ -337,14 +413,14 @@ class BlockSpacer(SpacerContainer.Spacer):
             painter.setPen(Qt.NoPen)
         painter.drawRect(self.rect())
 
-class BlockItem(SpacerContainer.Item, BlockItemViewAttributes):
+class BlockItem(SpacerContainer.Item, QtBlockItemAttributes):
     """ This is a QGraphicsWidget for a Diarc Block. """
     def __init__(self, parent, block_index):
         self._layout_manager = typecheck(parent, LayoutManagerWidget, "parent")
         self._view = parent.view()
         self._adapter = parent.adapter()
         super(BlockItem, self).__init__(parent, parent.block_container)
-        BlockItemViewAttributes.__init__(self)
+        QtBlockItemAttributes.__init__(self)
 
         # Qt Settings
         self.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
@@ -369,11 +445,8 @@ class BlockItem(SpacerContainer.Item, BlockItemViewAttributes):
         self.myCollector = MyCollector(self)
 
     def set_attributes(self, attrs):
-        typecheck(attrs, BlockItemViewAttributes, "attrs")
-        self._copy_attributes(attrs)
-        self.bgcolor = QColor(attrs.bgcolor)
-        self.border_color = QColor(attrs.border_color)
-        self.label_color = QColor(attrs.label_color)
+        typecheck(attrs, BlockItemAttributes, "attrs")
+        self.copy_attributes(attrs)
         self._middleSpacer.set_width(self.spacerwidth)
         self.update(self.rect())
 
@@ -660,9 +733,9 @@ class SnapSpacer(SpacerContainer.Spacer):
 
 
 
-class SnapItem(SpacerContainer.Item, SnapItemViewAttributes):
+class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
     def __init__(self, parent, snapkey):
-        SnapItemViewAttributes.__init__(self)
+        QtSnapItemAttributes.__init__(self)
         block_index, container_name, snap_order = parse_snapkey(snapkey)
         self._snapkey = snapkey
         self._layout_manager = typecheck(parent, LayoutManagerWidget, "parent")
@@ -720,11 +793,8 @@ class SnapItem(SpacerContainer.Item, SnapItemViewAttributes):
         return True
 
     def set_attributes(self, attrs):
-        typecheck(attrs, SnapItemViewAttributes, "attrs")
-        self._copy_attributes(attrs)
-        self.bgcolor = QColor(attrs.bgcolor)
-        self.border_color = QColor(attrs.border_color)
-        self.label_color = QColor(attrs.label_color)
+        typecheck(attrs, SnapItemAttributes, "attrs")
+        self.copy_attributes(attrs)
         self.set_width(attrs.width)
         self.update(self.rect())
 
@@ -1010,17 +1080,17 @@ class QtView(QGraphicsView, View):
     __add_block_item_signal = Signal(int)
     __remove_block_item_signal = Signal(int)
     __set_block_item_settings_signal = Signal(int, object, object)
-    __set_block_item_attributes_signal = Signal(int, BlockItemViewAttributes)
+    __set_block_item_attributes_signal = Signal(int, BlockItemAttributes)
 
     __add_band_item_signal = Signal(int, int)
     __remove_band_item_signal = Signal(int)
     __set_band_item_settings_signal = Signal(int, int, object, object, str, str)
-    __set_band_item_attributes_signal = Signal(int, BandItemViewAttributes)
+    __set_band_item_attributes_signal = Signal(int, BandItemAttributes)
 
     __add_snap_item_signal = Signal(str)
     __remove_snap_item_signal = Signal(str)
     __set_snap_item_settings_signal = Signal(str, object, object, object, object)
-    __set_snap_item_attributes_signal = Signal(str, SnapItemViewAttributes)
+    __set_snap_item_attributes_signal = Signal(str, SnapItemAttributes)
 
     def __init__(self):
         super(QtView, self).__init__(None)
@@ -1114,6 +1184,7 @@ class QtView(QGraphicsView, View):
             self.scale(scaleFactor, scaleFactor)
         else:
             self.scale(1.0/scaleFactor, 1.0/scaleFactor)
+
 
 
 

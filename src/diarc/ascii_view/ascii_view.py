@@ -1,6 +1,8 @@
-from topology import *
-from view import *
-from CharGrid import *
+from diarc.snapkey import gen_snapkey
+from diarc.snapkey import parse_snapkey
+from diarc.util import TypedDict
+from diarc.view import View
+from CharGrid import CharGrid
 
 block_spacing = 5
 
@@ -428,8 +430,6 @@ class AsciiView(View):
     def has_snap_item(self, snapkey):
         return True if snapkey in self._snap_items else False
 
-    def get_snap_items(self, snapkey):
-        return self._snap_item[snapkey]
 
     def set_snap_item_settings(self, snapkey, left_order, right_order, pos_band_alt, neg_band_alt):
         item = self._snap_items[snapkey]

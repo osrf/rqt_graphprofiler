@@ -175,6 +175,52 @@ class View(object):
         raise NotImplementedError()
 
 
+class ViewItemAttributes(object):
+    """ Visual Attributes for Items 
+    These settings may or may not be applied by the view.
+
+    bgcolor -- the background color
+    border_color -- color of the border
+    label -- label text
+    label_color -- color of the label text
+    """
+    def __init__(self):
+        self.bgcolor = None
+        self.border_color = None
+        self.border_width = 0
+        self.label = None
+        self.label_color = None
+        self.label_rotation = 0
+
+    def copy_attributes(self, attrs):
+        """ Copies attributes from attrs to this object """
+        # Subclasses may override some member values with @property methods.
+        # This copies all the values of the source using whatever method is
+        # implemented by the destination
+        for key in attrs.__dict__:
+            setattr(self, key, attrs.__dict__[key])
+
+class BlockItemAttributes(ViewItemAttributes):
+    """ Visual Attributes for BlockItems 
+    These settings may or may not be applied by the view.
+    spacerwidth -- distance between emitter and collector
+    """
+    def __init__(self):
+        super(BlockItemAttributes, self).__init__()
+        self.spacerwidth = None
+      
+class BandItemAttributes(ViewItemAttributes):
+    def __init__(self):
+        super(BandItemAttributes, self).__init__()
+        self.width = None
+
+class SnapItemAttributes(ViewItemAttributes):
+    def __init__(self):
+        super(SnapItemAttributes, self).__init__()
+        self.width = None
+
+
+
 class DuplicateItemExistsError(Exception):
     """ An Item with the specified parameters already exists """
     pass

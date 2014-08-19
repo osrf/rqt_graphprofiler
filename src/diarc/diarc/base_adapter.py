@@ -1,5 +1,7 @@
-from view_attributes import *
-from view import *
+from view import View
+from view import BlockItemAttributes
+from view import BandItemAttributes
+from view import SnapItemAttributes
 from adapter import Adapter
 from topology import *
 import sys
@@ -19,7 +21,7 @@ class BaseAdapter(Adapter):
 
     def get_block_item_attributes(self, block_index):
         """ Default method for providing some stock settings for blocks """
-        attrs = BlockItemViewAttributes()
+        attrs = BlockItemAttributes()
         attrs.bgcolor = "white"
         attrs.border_color = "red"
         attrs.border_width = 0
@@ -31,7 +33,7 @@ class BaseAdapter(Adapter):
 
     def get_band_item_attributes(self, band_altitude):
         """ Default method for providing some stock settings for bands """
-        attrs = BandItemViewAttributes()
+        attrs = BandItemAttributes()
         attrs.bgcolor = "white"
         attrs.border_color = "red"
         attrs.label = str(band_altitude)
@@ -41,12 +43,12 @@ class BaseAdapter(Adapter):
 
     def get_snap_item_attributes(self, snapkey):
         """ Default method for providing some stock settings for snaps """
-        attrs = SnapItemViewAttributes()
+        attrs = SnapItemAttributes()
         attrs.bgcolor = "white"
         attrs.border_color = "blue" if "e" in snapkey else "green"
         attrs.border_width = 0
         attrs.label = snapkey
-        attrs.label_color = "black"
+        attrs.label_color = "red"
         attrs.width = 20
         return attrs
 

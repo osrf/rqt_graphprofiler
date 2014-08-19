@@ -4,7 +4,10 @@ QUIET_NAMES = ['/rosout','/tf']
 
 from diarc.base_adapter import *
 from ros_topology import *
-from diarc.view_attributes import *
+from diarc.view import BlockItemAttributes
+from diarc.view import BandItemAttributes
+from diarc.view import SnapItemAttributes
+# from diarc.view_attributes import *
 
 
 class RosAdapter(BaseAdapter):
@@ -20,7 +23,7 @@ class RosAdapter(BaseAdapter):
     def get_block_item_attributes(self, block_index):
         """ Overloads the BaseAdapters stock implementation of this method """
         block = self._topology.blocks[block_index]
-        attrs = BlockItemViewAttributes()
+        attrs = BlockItemAttributes()
         attrs.bgcolor = "white"
         attrs.border_color = "red"
         attrs.border_width = 0
@@ -33,7 +36,7 @@ class RosAdapter(BaseAdapter):
     def get_band_item_attributes(self, band_altitude):
         """ Overloads the BaseAdapters stock implementation of this method """
         band = self._topology.bands[band_altitude]
-        attrs = BandItemViewAttributes()
+        attrs = BandItemAttributes()
         attrs.bgcolor = "white"
         attrs.border_color = "red"
         attrs.label = band.edge.name
@@ -43,7 +46,7 @@ class RosAdapter(BaseAdapter):
 
     def get_snap_item_attributes(self, snapkey):
         """ Default method for providing some stock settings for snaps """
-        attrs = SnapItemViewAttributes()
+        attrs = SnapItemAttributes()
         attrs.bgcolor = "white"
         attrs.border_color = "red"
         attrs.border_width = 0
