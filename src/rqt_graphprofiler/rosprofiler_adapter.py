@@ -25,6 +25,9 @@ class ROSProfileAdapter(BaseAdapter):
         self._TOPIC_QUIET_LIST = list()
         self._NODE_QUIET_LIST = list()
 
+        # Data Buffers
+        self._last_topology_received = Graph()
+
         # Callbacks
         self.node_statistics_subscriber = rospy.Subscriber('/node_statistics', NodeStatistics, self._node_statistics_callback)
         self.topic_statistics_subscriber = rospy.Subscriber('/statistics', TopicStatistics, self._topic_statistics_callback)
@@ -33,6 +36,7 @@ class ROSProfileAdapter(BaseAdapter):
         self._lock = Lock()
 
     def set_topic_quiet_list(self, topic_names):
+        rospy.loginfo("Updating topic quiet list to %r" % topic_names)
         self._TOPIC_QUIET_LIST = copy.copy(topic_names)
 
     def get_topic_quiet_list(self):
@@ -54,15 +58,21 @@ class ROSProfileAdapter(BaseAdapter):
         pass
 
     def _topology_callback(self, data):
+        self._last_topology_received = copy.copy(data)
+        self._topology_update()
+
+    def _topology_update(self):
         """ Updates the model with current topology information """
-        # TODO: THIS IS WRONG WARNING WARNING WARNING WARNING
-        # TODO: Signals and SLOTS! This is directly trying up update the qt graphics ,thats bad!
+        data = self._last_topology_received
 
         # Remove any topics from Ros System Graph not currently known by the profiling system
         rsgTopics = self._topology.topics
         allCurrentTopicNames = [t.name for t in data.topics]
         for topic in rsgTopics.values():
-            if topic.name not in allCurrentTopicNames or topic.name in self._TOPIC_QUIET_LIST:
+            if topic.name in self._TOPIC_QUIET_LIST:
+                print "Removing Topic",topic.name, "found in quiet list"
+                topic.release()
+            elif topic.name not in allCurrentTopicNames:
                 print "Removing Topic",topic.name, "not found in ",allCurrentTopicNames
                 topic.release()
 
@@ -80,7 +90,7 @@ class ROSProfileAdapter(BaseAdapter):
             if node.name in self._NODE_QUIET_LIST:
                 print "Removing node",node.name,"found on quiet list"
                 node.release()
-            if node.name not in allCurrentNodeNames:
+            elif node.name not in allCurrentNodeNames:
                 print "Removing Node",node.name, "not found in ",allCurrentNodeNames
                 node.release()
                 # TODO: Remove any of the nodes publishers or subscribers now
@@ -100,8 +110,8 @@ class ROSProfileAdapter(BaseAdapter):
                     rospy.logerr("rsg_node and data.node uri's do not match for name %s"%node.name)
 
             # Filter published and subscribed topics we are ignoring
-            node.publishes = [p for p in node.publishes if p not in self._TOPIC_QUIET_LIST]
-            node.subscribes = [s for s in node.subscribes if s not in self._TOPIC_QUIET_LIST]
+            publishes_list = [p for p in node.publishes if p not in self._TOPIC_QUIET_LIST]
+            subscribes_list = [s for s in node.subscribes if s not in self._TOPIC_QUIET_LIST]
              
             # Add and remove publishers for this node only
             # Compile two dictionaries, one of existing topics and one of the most recently
@@ -109,7 +119,7 @@ class ROSProfileAdapter(BaseAdapter):
             # current list, add publishers that not in the existing list but in the current list,
             # and update publishers that occur in both lists.
             existing_rsg_node_pub_topics = dict([(publisher.topic.name, publisher) for publisher in rsg_node.publishers])
-            current_node_prof_pub_topics = dict([(topic_name, self._topology.topics[topic_name]) for topic_name in node.publishes])
+            current_node_prof_pub_topics = dict([(topic_name, self._topology.topics[topic_name]) for topic_name in publishes_list])
             for existing_topic_name in existing_rsg_node_pub_topics.keys():
                 # Remove Publisher
                 if existing_topic_name not in current_node_prof_pub_topics.keys():
@@ -122,7 +132,7 @@ class ROSProfileAdapter(BaseAdapter):
             # Add and remove subscribers for this node only.
             # This follows the same patteren as the publishers above.
             existing_rsg_node_sub_topics = dict([(subscriber.topic.name, subscriber) for subscriber in rsg_node.subscribers])
-            current_node_prof_sub_topics = dict([(topic_name, self._topology.topics[topic_name]) for topic_name in node.subscribes])
+            current_node_prof_sub_topics = dict([(topic_name, self._topology.topics[topic_name]) for topic_name in subscribes_list])
             for existing_topic_name in existing_rsg_node_sub_topics.keys():
                 # Remove Subscriber
                 if existing_topic_name not in current_node_prof_sub_topics.keys():
