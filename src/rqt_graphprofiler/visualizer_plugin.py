@@ -3,12 +3,21 @@ import sys
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtGui import QWidget
+from python_qt_binding.QtGui import QVBoxLayout
+from python_qt_binding.QtGui import QHBoxLayout
+from python_qt_binding.QtGui import QPushButton
 
 import rospy
 import rosprofiler_adapter
 from diarc import *
 from diarc import topology
 from diarc import qt_view
+
+from blacklist import BlacklistDialog
+
+TOPIC_BLACKLIST = ['/clock', '/topology', '/statistics']
+NODE_BLACKLIST = ['/rosout']
+
 class VisualizerPlugin(Plugin):
     def __init__(self, context):
         super(VisualizerPlugin, self).__init__(context)
@@ -22,10 +31,7 @@ class VisualizerPlugin(Plugin):
                         dest="quiet", help="Put plugin in silent mode")
         args, unknowns = parser.parse_known_args(context.argv())
 
-        self._view = qt_view.QtView()
-        self._view.setWindowTitle('Graph Profiler')
-        self._adapter = rosprofiler_adapter.ROSProfileAdapter(self._view)
-        context.add_widget(self._view)
+        context.add_widget(VisualizerWidget())
 
     def shutdown_plugin(self):
         pass
@@ -35,3 +41,43 @@ class VisualizerPlugin(Plugin):
 
     def restore_settings(self, plugin_settings, instance_settings):
         pass
+
+class VisualizerWidget(QWidget):
+    def __init__(self, parent=None):
+        super(VisualizerWidget, self).__init__(parent)
+        self.setWindowTitle('Graph Profiler Visualizer')
+        vbox = QVBoxLayout()
+        self.setLayout(vbox)
+
+        toolbar_layout = QHBoxLayout()
+        refresh_button = QPushButton("Refresh")
+
+        topic_blacklist_button = QPushButton("Topic Blacklist")
+        topic_blacklist_button.clicked.connect(self._edit_topic_blacklist)
+        node_blacklist_button = QPushButton("Node Blacklist")
+        node_blacklist_button.clicked.connect(self._edit_node_blacklist)
+        toolbar_layout.addWidget(refresh_button)
+        toolbar_layout.addWidget(topic_blacklist_button)
+        toolbar_layout.addWidget(node_blacklist_button)
+        vbox.addLayout(toolbar_layout)
+
+        # Initialize the Visualizer
+        self._view = qt_view.QtView()
+        self._adapter = rosprofiler_adapter.ROSProfileAdapter(self._view)
+        self._adapter.set_topic_quiet_list(TOPIC_BLACKLIST)
+        self._adapter.set_node_quiet_list(NODE_BLACKLIST)
+        vbox.addWidget(self._view)
+
+    def _edit_topic_blacklist(self):
+        """ Opens topic blacklist Dialog and modifies the blacklist """
+        topics = self._adapter.get_topic_quiet_list()
+        topic_blacklist = BlacklistDialog.get_blacklist(values=topics)
+        self._adapter.set_topic_quiet_list(topic_blacklist)
+        self._adapter._topology_update()
+        
+    def _edit_node_blacklist(self):
+        """ Opens node blacklist Dialog and modifies the blacklist """
+        nodes = self._adapter.get_node_quiet_list()
+        node_blacklist = BlacklistDialog.get_blacklist(values=nodes)
+        self._adapter.set_node_quiet_list(node_blacklist)
+        self._adapter._topology_update()
