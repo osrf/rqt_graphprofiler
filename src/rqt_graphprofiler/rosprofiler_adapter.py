@@ -10,7 +10,6 @@ from rosgraph_msgs.msg import *
 from ros_topology_msgs.msg import *
 from ros_statistics_msgs.msg import *
 
-QUIET_NAMES = ['/rosout','/tf']
 
 class ROSProfileAdapter(BaseAdapter):
     """ Implementes the Adapter interface for the View and provides hooks for
@@ -23,12 +22,20 @@ class ROSProfileAdapter(BaseAdapter):
         super(ROSProfileAdapter,self).__init__(rsg.RosSystemGraph(),view)
         self._topology.hide_disconnected_snaps = True
 
+        self._TOPIC_QUIET_LIST = list()
+
         # Callbacks
         self.node_statistics_subscriber = rospy.Subscriber('/node_statistics', NodeStatistics, self._node_statistics_callback)
         self.topic_statistics_subscriber = rospy.Subscriber('/statistics', TopicStatistics, self._topic_statistics_callback)
         self.host_statistics_subscriber = rospy.Subscriber('/host_statistics', HostStatistics, self._host_statistics_callback)
         self.topology_subscriber = rospy.Subscriber('/topology', Graph, self._topology_callback)
         self._lock = Lock()
+
+    def set_topic_quiet_list(self, topic_names):
+        self._TOPIC_QUIET_LIST = copy.copy(topic_names)
+
+    def get_topic_quiet_list(self):
+        return copy.copy(self._TOPIC_QUIET_LIST)
 
     def _node_statistics_callback(self, data):
         pass
@@ -48,13 +55,13 @@ class ROSProfileAdapter(BaseAdapter):
         rsgTopics = self._topology.topics
         allCurrentTopicNames = [t.name for t in data.topics]
         for topic in rsgTopics.values():
-            if topic.name not in allCurrentTopicNames:
+            if topic.name not in allCurrentTopicNames or topic.name in self._TOPIC_QUIET_LIST:
                 print "Removing Topic",topic.name, "not found in ",allCurrentTopicNames
                 topic.release()
 
         # Add any topics not currently in the Ros System Graph
         for topic in data.topics:
-            if topic.name not in rsgTopics: # and topicName not in QUIET_NAMES:
+            if topic.name not in rsgTopics and topic.name not in self._TOPIC_QUIET_LIST:
                 topic = rsg.Topic(self._topology, topic.name, topic.type)
         
         # Get all the nodes we currently know about
@@ -78,7 +85,11 @@ class ROSProfileAdapter(BaseAdapter):
                 rsg_node = self._topology.nodes[node.name]
                 if not rsg_node.location == node.uri:
                     rospy.logerr("rsg_node and data.node uri's do not match for name %s"%node.name)
-              
+
+            # Filter published and subscribed topics we are ignoring
+            node.publishes = [p for p in node.publishes if p not in self._TOPIC_QUIET_LIST]
+            node.subscribes = [s for s in node.subscribes if s not in self._TOPIC_QUIET_LIST]
+             
             # Add and remove publishers for this node only
             # Compile two dictionaries, one of existing topics and one of the most recently
             # reported topics. Remove existing publishers that are not mentioned in the 
