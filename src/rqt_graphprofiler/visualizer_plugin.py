@@ -55,6 +55,7 @@ class VisualizerWidget(QWidget):
         refresh_button = QPushButton()
         refresh_button.setIcon(QIcon.fromTheme('view-refresh'))
         auto_refresh_checkbox = QCheckBox("Auto Refresh")
+        hide_disconnected_topics = QCheckBox("Hide Disconnected Topics")
         topic_blacklist_button = QPushButton("Topic Blacklist")
         node_blacklist_button = QPushButton("Node Blacklist")
 
@@ -63,10 +64,13 @@ class VisualizerWidget(QWidget):
         node_blacklist_button.clicked.connect(self._edit_node_blacklist)
         auto_refresh_checkbox.setCheckState(2)
         auto_refresh_checkbox.stateChanged.connect(self._autorefresh_changed)
+        hide_disconnected_topics.setCheckState(2)
+        hide_disconnected_topics.stateChanged.connect(self._hidedisconnectedtopics_changed)
 
         toolbar_layout.addWidget(refresh_button)
         toolbar_layout.addWidget(auto_refresh_checkbox)
         toolbar_layout.addStretch(0)
+        toolbar_layout.addWidget(hide_disconnected_topics)
         toolbar_layout.addWidget(topic_blacklist_button)
         toolbar_layout.addWidget(node_blacklist_button)
         vbox.addLayout(toolbar_layout)
@@ -100,6 +104,16 @@ class VisualizerWidget(QWidget):
         elif value == 0:
             print "Disabling Autorefresh"
             self._adapter.disable_auto_update()
+        else:
+            raise Exception()
+
+    def _hidedisconnectedtopics_changed(self, value):
+        if value == 2:
+            print "Hiding disconnected topics"
+            self._adapter.hide_disconnected_topics()
+        elif value == 0:
+            print "Showing disconnected topics"
+            self._adapter.show_disconnected_topics()
         else:
             raise Exception()
 

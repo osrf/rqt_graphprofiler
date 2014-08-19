@@ -56,6 +56,14 @@ class ROSProfileAdapter(BaseAdapter):
 
     def disable_auto_update(self):
         self._auto_update = False
+    
+    def show_disconnected_topics(self):
+        self._topology.hide_disconnected_snaps = False
+        self.topology_update()
+
+    def hide_disconnected_topics(self):
+        self._topology.hide_disconnected_snaps = True
+        self.topology_update()
 
     def _node_statistics_callback(self, data):
         pass
