@@ -23,6 +23,7 @@ class ROSProfileAdapter(BaseAdapter):
         self._topology.hide_disconnected_snaps = True
 
         self._TOPIC_QUIET_LIST = list()
+        self._NODE_QUIET_LIST = list()
 
         # Callbacks
         self.node_statistics_subscriber = rospy.Subscriber('/node_statistics', NodeStatistics, self._node_statistics_callback)
@@ -36,6 +37,12 @@ class ROSProfileAdapter(BaseAdapter):
 
     def get_topic_quiet_list(self):
         return copy.copy(self._TOPIC_QUIET_LIST)
+
+    def set_node_quiet_list(self, node_names):
+        self._NODE_QUIET_LIST = copy.copy(node_names)
+
+    def get_node_quiet_list(self):
+        return copy.copy(self._NODE_QUIET_LIST)
 
     def _node_statistics_callback(self, data):
         pass
@@ -70,6 +77,9 @@ class ROSProfileAdapter(BaseAdapter):
         # Remove any nodes from RosSystemGraph not currently known to master
         allCurrentNodeNames = [n.name for n in data.nodes]
         for node in rsgNodes.values():
+            if node.name in self._NODE_QUIET_LIST:
+                print "Removing node",node.name,"found on quiet list"
+                node.release()
             if node.name not in allCurrentNodeNames:
                 print "Removing Node",node.name, "not found in ",allCurrentNodeNames
                 node.release()
@@ -77,6 +87,9 @@ class ROSProfileAdapter(BaseAdapter):
 
         # Add any nodes not currently in the Ros System Graph
         for node in data.nodes:
+            # Skip any nodes that are on the quiet list
+            if node.name in self._NODE_QUIET_LIST:
+                continue
             rsg_node = None
             if node.name not in rsgNodes: # and name not in QUIET_NAMES:
                 rsg_node = rsg.Node(self._topology, node.name)
