@@ -7,6 +7,7 @@ from python_qt_binding.QtGui import QVBoxLayout
 from python_qt_binding.QtGui import QHBoxLayout
 from python_qt_binding.QtGui import QPushButton
 from python_qt_binding.QtGui import QCheckBox
+from python_qt_binding.QtGui import QIcon
 
 import rospy
 import rosprofiler_adapter
@@ -51,7 +52,8 @@ class VisualizerWidget(QWidget):
         self.setLayout(vbox)
 
         toolbar_layout = QHBoxLayout()
-        refresh_button = QPushButton("Refresh")
+        refresh_button = QPushButton()
+        refresh_button.setIcon(QIcon.fromTheme('view-refresh'))
         auto_refresh_checkbox = QCheckBox("Auto Refresh")
         topic_blacklist_button = QPushButton("Topic Blacklist")
         node_blacklist_button = QPushButton("Node Blacklist")
@@ -64,6 +66,7 @@ class VisualizerWidget(QWidget):
 
         toolbar_layout.addWidget(refresh_button)
         toolbar_layout.addWidget(auto_refresh_checkbox)
+        toolbar_layout.addStretch(0)
         toolbar_layout.addWidget(topic_blacklist_button)
         toolbar_layout.addWidget(node_blacklist_button)
         vbox.addLayout(toolbar_layout)
