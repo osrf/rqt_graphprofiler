@@ -22,6 +22,9 @@ class ROSProfileAdapter(BaseAdapter):
         super(ROSProfileAdapter,self).__init__(rsg.RosSystemGraph(),view)
         self._topology.hide_disconnected_snaps = True
 
+        # Determines whether or not to update the visualization when new data is received
+        self._auto_update = True
+
         self._TOPIC_QUIET_LIST = list()
         self._NODE_QUIET_LIST = list()
 
@@ -48,6 +51,12 @@ class ROSProfileAdapter(BaseAdapter):
     def get_node_quiet_list(self):
         return copy.copy(self._NODE_QUIET_LIST)
 
+    def enable_auto_update(self):
+        self._auto_update = True
+
+    def disable_auto_update(self):
+        self._auto_update = False
+
     def _node_statistics_callback(self, data):
         pass
 
@@ -59,9 +68,10 @@ class ROSProfileAdapter(BaseAdapter):
 
     def _topology_callback(self, data):
         self._last_topology_received = copy.copy(data)
-        self._topology_update()
+        if self._auto_update:
+            self.topology_update()
 
-    def _topology_update(self):
+    def topology_update(self):
         """ Updates the model with current topology information """
         data = self._last_topology_received
 
