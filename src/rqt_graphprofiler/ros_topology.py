@@ -48,6 +48,16 @@ class Node(Vertex):
         self.name = name
         self.location = None
         self.pid = None
+        self.num_threads = 0
+        self.cpu_load_mean = 0
+        self.cpu_load_std = 0
+        self.cpu_load_max = 0
+        self.virt_mem_mean = 0
+        self.virt_mem_std = 0
+        self.virt_mem_max = 0
+        self.real_mem_mean = 0
+        self.real_mem_std = 0
+        self.real_mem_max = 0
 
     @property
     def publishers(self):
