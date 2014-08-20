@@ -1,4 +1,6 @@
 import random
+import numpy as np
+import math
 from threading import *
 from diarc import topology
 from diarc.base_adapter import *
@@ -75,6 +77,7 @@ class ROSProfileAdapter(BaseAdapter):
 
         # Data Buffers
         self._last_topology_received = Graph()
+        self._last_node_statistics_received = dict() # name: NodeStatistics()
 
         # Callbacks
         self.node_statistics_subscriber = rospy.Subscriber('/node_statistics', NodeStatistics, self._node_statistics_callback)
@@ -82,6 +85,9 @@ class ROSProfileAdapter(BaseAdapter):
         self.host_statistics_subscriber = rospy.Subscriber('/host_statistics', HostStatistics, self._host_statistics_callback)
         self.topology_subscriber = rospy.Subscriber('/topology', Graph, self._topology_callback)
         self._lock = Lock()
+
+        # Timers
+        self._stats_timer = rospy.Timer(rospy.Duration(2.0),lambda x: self.statistics_update())
 
     def set_topic_quiet_list(self, topic_names):
         rospy.loginfo("Updating topic quiet list to %r" % topic_names)
@@ -97,10 +103,15 @@ class ROSProfileAdapter(BaseAdapter):
         return copy.copy(self._NODE_QUIET_LIST)
 
     def enable_auto_update(self):
+        """ Automatically update the visualization when information is received """
         self._auto_update = True
+        self._stats_timer = rospy.Timer(rospy.Duration(2.0),lambda x: self.statistics_update())
 
     def disable_auto_update(self):
+        """ buffer information received from ROS, but do not automatically update the visualization """
         self._auto_update = False
+        self._stats_timer.shutdown()
+        self._stats_timer = None
     
     def show_disconnected_topics(self):
         self._topology.hide_disconnected_snaps = False
@@ -111,8 +122,18 @@ class ROSProfileAdapter(BaseAdapter):
         self.topology_update()
 
     def _node_statistics_callback(self, data):
-        pass
-
+        """ Receives NodeStatistics() information and stores it in a buffer """
+#         latency = rospy.get_rostime() - data.window_stop 
+#         window = data.window_stop - data.window_start
+#         margin = window*2 - latency
+#         if margin.to_sec() > 0:
+#             rospy.logerr("Data from '%s' too old by %f secs"%(data.node,-margin.to_sec()))
+#             return
+        # If we have not collected any data from this node yet, initialize the node's buffer
+        if data.node not in self._last_node_statistics_received:
+            self._last_node_statistics_received[data.node] = list()
+        self._last_node_statistics_received[data.node].append(data)
+        
     def _topic_statistics_callback(self, data):
         pass
 
@@ -209,6 +230,50 @@ class ROSProfileAdapter(BaseAdapter):
 
         self._update_view()
 
+    def statistics_update(self):
+        """ Updates the model with current statistics information """
+        rospy.loginfo("Updating Statistics")
+        # TODO: Requires a lock with the callback and other threads
+        rsgNodes = self._topology.nodes 
+        for node_name, data_buffer in self._last_node_statistics_received.items():
+            # Don't process node statistics that we do not have in our internal topology
+            # (we don't have a place to store the information). 
+            if node_name not in rsgNodes:
+                if node_name not in self._NODE_QUIET_LIST:
+                    rospy.logwarn("Received Statistics Information for untracked node %s" % node_name)
+                continue
+            # Populate datasets for this node
+            samples = list()
+            num_threads = list()
+            cpu_load_mean = list()
+            cpu_load_std = list()
+            cpu_load_max = list()
+            virt_mem_mean = list()
+            virt_mem_std = list()
+            virt_mem_max = list()
+            # TODO: Real memory
+            for data in data_buffer:
+                samples.append(data.samples)
+                num_threads.append(data.threads)
+                cpu_load_mean.append(data.cpu_load_mean)
+                cpu_load_std.append(data.cpu_load_std)
+                cpu_load_max.append(data.cpu_load_max)
+                virt_mem_mean.append(data.virt_mem_mean)
+                virt_mem_std.append(data.virt_mem_std)
+                virt_mem_max.append(data.virt_mem_max)
+            rsgNodes[node_name].num_threads = max(num_threads)
+            rsgNodes[node_name].cpu_load_mean = np.mean(np.array(cpu_load_mean))
+            rsgNodes[node_name].cpu_load_std = math.sqrt(sum(
+                    [math.pow(sd,2)/n for sd,n in zip(cpu_load_std, samples)]))
+            rsgNodes[node_name].cpu_load_max = max(cpu_load_max)
+            rsgNodes[node_name].virt_mem_mean = np.mean(np.array(virt_mem_mean))
+            rsgNodes[node_name].virt_mem_std = math.sqrt(sum(
+                    [math.pow(sd,2)/n for sd,n in zip(virt_mem_std, samples)]))
+            rsgNodes[node_name].virt_mem_max = max(virt_mem_max)
+        self._last_node_statistics_received.clear()
+
+        self._update_view()
+
 
     def get_block_item_attributes(self, block_index):
         """ Overloads the BaseAdapters stock implementation of this method """
@@ -218,7 +283,7 @@ class ROSProfileAdapter(BaseAdapter):
         attrs.border_color = "black"
         attrs.border_width = 5
         attrs.label = block.vertex.name
-        attrs.label_rotation = -90
+        attrs.tooltip_text = "Node:\t%s\nCPU:\t%d\nMEM:\t%s\nThreads:\t%d" % (block.vertex.name, block.vertex.cpu_load_mean, sizeof_fmt(block.vertex.virt_mem_mean), block.vertex.num_threads)
         attrs.label_color = "black"
 #         attrs.spacerwidth = block.vertex.
         attrs.spacerwidth = 30
@@ -230,7 +295,7 @@ class ROSProfileAdapter(BaseAdapter):
         attrs = BandItemAttributes()
         attrs.bgcolor = self._colormapper.get_unique_color(band.edge.name)
         attrs.border_color = "red"
-#         attrs.label = self._colormapper.get_unique_color(band.edge.name)
+        attrs.tooltip_text = "Topic:\t%s\nBw:\nHz:" % (band.edge.name)
         attrs.label = band.edge.name
         attrs.label_color = "white"
         attrs.width = 15
@@ -242,10 +307,17 @@ class ROSProfileAdapter(BaseAdapter):
         attrs.bgcolor = "darkCyan" if 'c' in snapkey else "green"
         attrs.border_color = "darkBlue" if 'c' in snapkey else "darkGreen"
         attrs.border_width = 1
-        attrs.label = ""
+        attrs.label = self._topology.snaps[snapkey].connection.edge.name
         attrs.label_color = "white"
         attrs.width = 20
         return attrs
 
     
+def sizeof_fmt(num):
+    # Taken from http://stackoverflow.com/a/1094933
+    for x in ['bytes','KB','MB','GB','TB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+
 
