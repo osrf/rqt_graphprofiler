@@ -119,3 +119,4 @@ class VisualizerWidget(QWidget):
 
     def _refresh(self):
         self._adapter.topology_update()
+        self._adapter.statistics_update()
