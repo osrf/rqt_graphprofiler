@@ -1,3 +1,4 @@
+import random
 from threading import *
 from diarc import topology
 from diarc.base_adapter import *
@@ -14,6 +15,46 @@ from ros_topology_msgs.msg import *
 from ros_statistics_msgs.msg import *
 
 
+class ColorMapper(object):
+    def __init__(self):
+#         self._choices = ["magenta","red","darkMagenta","yellow","darkYellow","blue","darkBlue"]
+        self._choices = list()
+        # Reds
+        self._choices.extend(["IndianRed", "DarkSalmon", "Crimson"])
+        # Pinks
+        self._choices.extend(["HotPink","DeepPink"])
+        # Oranges
+        self._choices.extend(["Coral","OrangeRed","DarkOrange"])
+        # Yellows
+        self._choices.extend(["Gold","DarkKhaki"])
+        # Purples
+        self._choices.extend(["Thistle","Orchid","MediumPurple","DarkOrchid","Purple","Indigo","DarkSlateBlue"])
+        # Greens
+        self._choices.extend(["LawnGreen","LimeGreen","MediumSeaGreen","ForestGreen","OliveDrab","Olive","DarkOliveGreen","DarkCyan"])
+        # Blues
+        self._choices.extend(["PaleTurquoise","Turquoise","CadetBlue","SteelBlue","DodgerBlue"])
+        # Browns
+        self._choices.extend(["Cornsilk","Tan","RosyBrown","SandyBrown","Goldenrod","DarkGoldenrod","SaddleBrown"])
+        self._used_colors = dict()
+
+    def get_unique_color(self, name):
+        if name not in self._used_colors:
+            if len(self._choices) > 0:
+                self._used_colors[name] = random.choice(self._choices)
+                self._choices.remove(self._used_colors[name])
+            else:
+                self._used_colors[name] = "Gray"
+        return self._used_colors[name]
+
+    def release_unique_color(self, name):
+        print "... releasing color"
+        if name in self._used_colors:
+            if not self._used_colors[name] == "Gray":
+                self._choices.append(self._used_colors[name])
+            self._used_colors.pop(name)
+        else:
+            rospy.logwarn("Unknown name mapped to color!")
+
 class ROSProfileAdapter(BaseAdapter):
     """ Implementes the Adapter interface for the View and provides hooks for
     populating and implementing the ros specific version of the topology.
@@ -25,6 +66,7 @@ class ROSProfileAdapter(BaseAdapter):
         super(ROSProfileAdapter,self).__init__(rsg.RosSystemGraph(),view)
         self._topology.hide_disconnected_snaps = True
 
+        self._colormapper = ColorMapper()
         # Determines whether or not to update the visualization when new data is received
         self._auto_update = True
 
@@ -92,9 +134,11 @@ class ROSProfileAdapter(BaseAdapter):
         for topic in rsgTopics.values():
             if topic.name in self._TOPIC_QUIET_LIST:
                 print "Removing Topic",topic.name, "found in quiet list"
+                self._colormapper.release_unique_color(topic.name)
                 topic.release()
             elif topic.name not in allCurrentTopicNames:
                 print "Removing Topic",topic.name, "not found in ",allCurrentTopicNames
+                self._colormapper.release_unique_color(topic.name)
                 topic.release()
 
         # Add any topics not currently in the Ros System Graph
@@ -184,10 +228,11 @@ class ROSProfileAdapter(BaseAdapter):
         """ Overloads the BaseAdapters stock implementation of this method """
         band = self._topology.bands[band_altitude]
         attrs = BandItemAttributes()
-        attrs.bgcolor = "white"
+        attrs.bgcolor = self._colormapper.get_unique_color(band.edge.name)
         attrs.border_color = "red"
+#         attrs.label = self._colormapper.get_unique_color(band.edge.name)
         attrs.label = band.edge.name
-        attrs.label_color = "red"
+        attrs.label_color = "white"
         attrs.width = 15
         return attrs
 
