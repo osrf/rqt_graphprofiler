@@ -816,6 +816,8 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
             l.addAnchor(self.posBandItem, Qt.AnchorBottom, self.upLink, Qt.AnchorTop)
             l.addAnchor(self, Qt.AnchorLeft, self.upLink, Qt.AnchorLeft)
             l.addAnchor(self, Qt.AnchorRight, self.upLink, Qt.AnchorRight)
+            self.upLink.bgcolor = self.posBandItem.bgcolor
+            self.upLink.border_color = self.posBandItem.border_color
         else:
             self.upLink.setVisible(False)
             self.upLink.setParent(None)
@@ -827,6 +829,8 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
             l.addAnchor(self.negBandItem, Qt.AnchorTop, self.downLink, Qt.AnchorBottom)
             l.addAnchor(self, Qt.AnchorLeft, self.downLink, Qt.AnchorLeft)
             l.addAnchor(self, Qt.AnchorRight, self.downLink, Qt.AnchorRight)
+            self.downLink.bgcolor = self.negBandItem.bgcolor
+            self.downLink.border_color = self.negBandItem.border_color
         else:
             self.downLink.setVisible(False)
             self.downLink.setParent(None)
@@ -868,9 +872,10 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
         painter.drawText(2,rect.height()/2+4,self.label)
 
 
-class SnapBandLink(QGraphicsWidget):
+class SnapBandLink(QGraphicsWidget, QtBandItemAttributes):
     def __init__(self,parent):
         super(SnapBandLink,self).__init__(parent=parent)
+        QtBandItemAttributes.__init__(self)
         self.setVisible(False)
         self.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.MinimumExpanding))
         self.setPreferredWidth(5)
@@ -881,10 +886,12 @@ class SnapBandLink(QGraphicsWidget):
     def paint(self,painter,option,widget):
         brush = QBrush()
         brush.setStyle(Qt.SolidPattern)
-        brush.setColor(Qt.white)
+#         brush.setColor(Qt.white)
+        brush.setColor(self.bgcolor)
         painter.fillRect(self.rect(),brush)
         pen = QPen()
-        pen.setBrush(Qt.red)
+#         pen.setBrush(Qt.red)
+        pen.setBrush(self.border_color)
         pen.setStyle(Qt.DashLine)
         painter.setPen(pen)
         painter.drawRect(self.rect())
@@ -1122,6 +1129,9 @@ class QtView(QGraphicsView, View):
         self.__set_snap_item_settings_signal.connect(self.layout_manager.set_snap_item_settings)
         self.__set_snap_item_attributes_signal.connect(self.layout_manager.set_snap_item_attributes)
         self.resize(1024,768)
+        QColor.setAllowX11ColorNames(True)
+        if not QColor.allowX11ColorNames():
+            rospy.logwarn("Coloring will not work properly")
         self.show()
 
     def update_view(self):
