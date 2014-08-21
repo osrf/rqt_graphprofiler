@@ -28,9 +28,9 @@ class RosAdapter(BaseAdapter):
         attrs.border_color = "red"
         attrs.border_width = 0
         attrs.label = block.vertex.name
-        attrs.label_rotation = -90
         attrs.label_color = "red"
         attrs.spacerwidth = 20
+        attrs.draw_debug = True
         return attrs
 
     def get_band_item_attributes(self, band_altitude):
@@ -42,6 +42,7 @@ class RosAdapter(BaseAdapter):
         attrs.label = band.edge.name
         attrs.label_color = "red"
         attrs.width = 15
+        attrs.draw_debug = True
         return attrs
 
     def get_snap_item_attributes(self, snapkey):
@@ -53,6 +54,7 @@ class RosAdapter(BaseAdapter):
         attrs.label = ""
         attrs.label_color = "red"
         attrs.width = 20
+        attrs.draw_debug = True
         return attrs
 
     def update_model(self):

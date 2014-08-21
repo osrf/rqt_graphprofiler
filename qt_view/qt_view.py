@@ -1,7 +1,8 @@
-from PyQt4.QtCore import Qt, QMimeData
-from PyQt4.QtGui import QPen, QColor, QSizePolicy, QDrag, QBrush, QGraphicsWidget
-from PyQt4.QtGui import QGraphicsView, QGraphicsAnchorLayout, QGraphicsScene
-from PyQt4.QtCore import pyqtSignal as Signal
+from python_qt_binding.QtCore import Qt, QMimeData, QPoint, QEvent
+from python_qt_binding.QtGui import QPen, QColor, QSizePolicy, QDrag, QBrush, QGraphicsWidget
+from python_qt_binding.QtGui import QGraphicsView, QGraphicsAnchorLayout, QGraphicsScene
+from python_qt_binding.QtGui import QFontMetrics, QToolTip
+from python_qt_binding.QtCore import pyqtSignal as Signal
 
 from diarc.snapkey import gen_snapkey, parse_snapkey
 from diarc.util import typecheck, TypedDict
@@ -12,6 +13,9 @@ from diarc.view import SnapItemAttributes
 from .SpacerContainer import SpacerContainer
 import json
 import sys
+import logging
+
+log = logging.getLogger('diarc.qt_view')
 
 class QtBlockItemAttributes(BlockItemAttributes):
     def __init__(self):
@@ -113,7 +117,7 @@ class BandSpacer(SpacerContainer.Spacer):
     def _release(self):
         topAltitude = self.topBand.altitude if self.topBand else None
         bottomAltitude = self.bottomBand.altitude if self.bottomBand else None
-        print "... Releasing BandSpacer between topBand %r and botBand %r"%(topAltitude, bottomAltitude)
+        log.debug("... Releasing BandSpacer between topBand %r and botBand %r"%(topAltitude, bottomAltitude))
         super(BandSpacer, self)._release()
 
     @property
@@ -169,13 +173,13 @@ class BandSpacer(SpacerContainer.Spacer):
             event.setAccepted(True)
             self.dragOver = True
             self.update()
-            print "Drag Positive ENTER between topBand %r and botBand %r"%(topAltitude, bottomAltitude)
+            log.debug("Drag Positive ENTER between topBand %r and botBand %r"%(topAltitude, bottomAltitude))
         # Accept a negative altitude band
         elif data['band'] < 0 and (topAltitude < 0 or bottomAltitude < 0):
             event.setAccepted(True)
             self.dragOver = True
             self.update()
-            print "Drag Negative ENTER between topBand %r and botBand %r"%(topAltitude, bottomAltitude)
+            log.debug("Drag Negative ENTER between topBand %r and botBand %r"%(topAltitude, bottomAltitude))
         else:
             event.setAccepted(False)
             return
@@ -202,7 +206,7 @@ class BandSpacer(SpacerContainer.Spacer):
         # Get the altitudes of the bands displayed above and below this spacer.
         topAltitude = self.topBand.altitude if self.topBand else None
         bottomAltitude = self.bottomBand.altitude if self.bottomBand else None
-        print "Moving Band %d between topBand %r and botBand %r"%(srcAlt, topAltitude, bottomAltitude)
+        log.debug("Moving Band %d between topBand %r and botBand %r"%(srcAlt, topAltitude, bottomAltitude))
         self._adapter.reorder_bands(srcAlt,bottomAltitude,topAltitude)
 
     def paint(self,painter,option,widget):
@@ -225,7 +229,7 @@ class BandItem(SpacerContainer.Item, QtBandItemAttributes):
 
         # Band properties - these must be kept up to date with topology
         self.altitude = altitude
-        self.rank = rank
+        self._rank = rank
         self.top_band = None
         self.bot_band = None
         self.left_most_snap = None
@@ -235,7 +239,8 @@ class BandItem(SpacerContainer.Item, QtBandItemAttributes):
         self.setContentsMargins(5,5,5,5)
         self.setSizePolicy(QSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding))
         self.set_width(15)
-        self.setZValue(rank)
+        self.setAcceptHoverEvents(True)
+#         self.setZValue(rank)
 
     def release(self):
         self.top_band = None
@@ -259,6 +264,14 @@ class BandItem(SpacerContainer.Item, QtBandItemAttributes):
     def isUsed(self):
         """ Deprecated """
         return True
+
+    @property 
+    def rank(self):
+        return self._rank
+    @rank.setter
+    def rank(self, value):
+        self._rank = value
+        self.setZValue(self._rank)
 
     def set_attributes(self, attrs):
         """ Applies a set of BandItemViewAttributes to this object. Transforms 
@@ -291,6 +304,18 @@ class BandItem(SpacerContainer.Item, QtBandItemAttributes):
         """ This is necessary to capture the mouse clicking event to drag"""
         pass
 
+    def mouseReleaseEvent(self, event):
+        log.debug("Bringing band %d to front" % self.altitude)
+        self._adapter.bring_band_to_front(self.altitude)
+
+    def hoverEnterEvent(self, event):
+        if self.tooltip_text:
+            QToolTip.showText(event.screenPos(),self.tooltip_text)
+
+    def hoverLeaveEvent(self, event):
+        QToolTip.hideText()
+
+
     def mouseMoveEvent(self, event):
         if event.buttons() != Qt.LeftButton:
             super(BandItem,self).mouseMoveEvent(event)
@@ -310,7 +335,10 @@ class BandItem(SpacerContainer.Item, QtBandItemAttributes):
         painter.drawRect(self.rect())
         rect = self.geometry()
         painter.setPen(self.label_color)
-        painter.drawText(0,rect.height()-2,self.label)
+        fm = painter.fontMetrics()
+        elided = fm.elidedText(self.label, Qt.ElideRight, rect.width())
+        twidth = fm.width(elided)
+        painter.drawText((rect.width()-twidth)/2,rect.height()-2,elided)
 
 
 
@@ -380,7 +408,7 @@ class BlockSpacer(SpacerContainer.Spacer):
         if 'block' in data:
             event.setAccepted(True)
             self.dragOver = True
-            print "Drag ENTER"
+            log.debug("Drag ENTER")
             self.update()
         else:
             event.setAccepted(False)
@@ -549,6 +577,7 @@ class BlockItem(SpacerContainer.Item, QtBlockItemAttributes):
             self.setSizePolicy(QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred))
             # The width of the block
             self.set_width(20)
+            self.setAcceptHoverEvents(True)
 
         def set_width(self, width):
             self.setPreferredWidth(width)
@@ -557,14 +586,32 @@ class BlockItem(SpacerContainer.Item, QtBlockItemAttributes):
         def release(self):
             self.setParent(None)
             self.blockItem = None
-    
+
+        def hoverEnterEvent(self, event):
+            if self.blockItem.tooltip_text:
+                QToolTip.showText(event.screenPos(),self.blockItem.tooltip_text)
+
+        def hoverLeaveEvent(self, event):
+            QToolTip.hideText()
+
+#         def event(self, event):
+#             if event.type() == QEvent.ToolTip:
+#             QToolTip.showText(event.screenPos(),self.label+" ToolTip!")
+#         else:
+#             QToolTip.hideText()
+#             event.ignore()
+#         return super(BlockItem, self).event(event)
+
         def paint(self,painter,option,widget):
             painter.setPen(Qt.NoPen)
             painter.drawRect(self.rect())
             painter.setPen(self.blockItem.label_color)
-            painter.rotate(self.blockItem.label_rotation)
+            painter.rotate(-90)
             rect = self.rect()
-            painter.drawText(-rect.height(),rect.width()-2,self.blockItem.label)
+            fm = painter.fontMetrics()
+            elided = fm.elidedText(self.blockItem.label, Qt.ElideRight, rect.height()-2)
+            twidth = fm.width(elided)
+            painter.drawText(-twidth-(rect.height()-twidth)/2,rect.width()-2,elided)
 
     class HorizontalSpacer(QGraphicsWidget):
         def __init__(self,parent):
@@ -603,13 +650,15 @@ class SnapContainer(SpacerContainer):
 
 class MyEmitter(SnapContainer):
     def paint(self, painter, option, widget):
-        painter.setPen(Qt.green)
-        painter.drawRect(self.rect())
+        if self.parentBlock.draw_debug:
+            painter.setPen(Qt.green)
+            painter.drawRect(self.rect())
    
 class MyCollector(SnapContainer):
     def paint(self, painter, option, widget):
-        painter.setPen(Qt.blue)
-        painter.drawRect(self.rect())
+        if self.parentBlock.draw_debug:
+            painter.setPen(Qt.blue)
+            painter.drawRect(self.rect())
  
 
 class SnapSpacer(SpacerContainer.Spacer):
@@ -839,6 +888,12 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
         """ Captures the mouse press event for dragging """
         pass
 
+    def mouseReleaseEvent(self, event):
+        if self.posBandItem:
+            self._adapter.bring_band_to_front(self.posBandItem.altitude)
+        if self.negBandItem:
+            self._adapter.bring_band_to_front(self.negBandItem.altitude)
+
     def mouseMoveEvent(self, event):
         if event.buttons() != Qt.LeftButton:
             super(SnapItem,self).mouseMoveEvent(event)
@@ -864,12 +919,17 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
         painter.drawRect(self.rect())
         rect = self.geometry()
         painter.setPen(self.label_color)
-
-        if self.posBandItem:
-            painter.drawText(6,12,str(self.posBandItem.altitude))
-        if self.negBandItem:
-            painter.drawText(3,rect.height()-3,str(self.negBandItem.altitude))
-        painter.drawText(2,rect.height()/2+4,self.label)
+        if self.draw_debug:
+            if self.posBandItem:
+                painter.drawText(6,12,str(self.posBandItem.altitude))
+            if self.negBandItem:
+                painter.drawText(3,rect.height()-3,str(self.negBandItem.altitude))
+#         painter.drawText(2,rect.height()/2+4,self.label)
+        painter.rotate(-90)
+        fm = painter.fontMetrics()
+        elided = fm.elidedText(self.label, Qt.ElideRight, rect.height())
+        twidth = fm.width(elided)
+        painter.drawText(-twidth-(rect.height()-twidth)/2,rect.width()-2,elided)
 
 
 class SnapBandLink(QGraphicsWidget, QtBandItemAttributes):
@@ -914,7 +974,7 @@ class LayoutManagerWidget(QGraphicsWidget):
         self._snap_items = TypedDict(str,SnapItem)  # snapkey  #TypedList(SnapItem)
 
     def add_block_item(self, index):
-        print "... Adding BlockItem %d"%index
+        log.debug("... Adding BlockItem %d"%index)
         """ create a new BlockItem """
         if index in self._block_items:
             raise DuplicateItemExistsError("Block Item with index %d already exists"%(index))
@@ -934,7 +994,7 @@ class LayoutManagerWidget(QGraphicsWidget):
         self._block_items[index].set_attributes(attributes)
 
     def remove_block_item(self, index):
-        print "... Removing BlockItem %d"%index
+        log.debug("... Removing BlockItem %d"%index)
         self._block_items[index].release()
         self._block_items.pop(index)
 
@@ -944,7 +1004,7 @@ class LayoutManagerWidget(QGraphicsWidget):
 
     def add_band_item(self, altitude, rank):
         """ Create a new drawable object to correspond to a Band. """
-        print "... Adding BandItem with altitude %d"%altitude
+        log.debug("... Adding BandItem with altitude %d"%altitude)
         if altitude in self._band_items:
             raise DuplicateItemExistsError("BandItem with altitude %d already exists"%(altitude))
         item = BandItem(self, altitude, rank)
@@ -956,7 +1016,7 @@ class LayoutManagerWidget(QGraphicsWidget):
 
     def remove_band_item(self, altitude):
         """ Remove the drawable object to correspond to a band """ 
-        print "... Removing BandItem altitude %d"%altitude
+        log.debug("... Removing BandItem altitude %d"%altitude)
         self._band_items[altitude].release()
         self._band_items.pop(altitude)
 
@@ -967,6 +1027,7 @@ class LayoutManagerWidget(QGraphicsWidget):
                                 top_band_alt, bot_band_alt,
                                 leftmost_snapkey, rightmost_snapkey):
         item = self._band_items[altitude]
+        item.rank = rank
         item.top_band = self._band_items[top_band_alt] if top_band_alt is not None else None
         item.bot_band = self._band_items[bot_band_alt] if bot_band_alt is not None else None
         item.left_most_snap = self._snap_items[str(leftmost_snapkey)]
@@ -979,7 +1040,7 @@ class LayoutManagerWidget(QGraphicsWidget):
         # snapkey gets passed as a QString automatically since it goes across
         # a signal/slot interface
         snapkey = str(snapkey)
-        print "... Adding SnapItem %s"%snapkey
+        log.debug("... Adding SnapItem %s"%snapkey)
         if snapkey in self._snap_items:
             raise DuplicateItemExistsError("SnapItem with snapkey %s already exists"%(snapkey))
         item = SnapItem(self, snapkey)
@@ -990,7 +1051,7 @@ class LayoutManagerWidget(QGraphicsWidget):
         # snapkey gets passed as a QString automatically since it goes across
         # a signal/slot interface
         snapkey = str(snapkey)
-        print "... Removing SnapItem %s"%snapkey
+        log.debug("... Removing SnapItem %s"%snapkey)
         self._snap_items[snapkey].release()
         self._snap_items.pop(snapkey)
 
@@ -1034,7 +1095,7 @@ class LayoutManagerWidget(QGraphicsWidget):
         return self._view.adapter
 
     def link(self):
-        print "*** Begining Linking ***" 
+        log.debug("*** Begining Linking ***")
         sys.stdout.flush()
         # Create a new anchored layout. Until I can figure out how to remove
         # objects from the layout, I need to make a new one each time
@@ -1060,16 +1121,16 @@ class LayoutManagerWidget(QGraphicsWidget):
         for item in self._snap_items.values():
             item.link()
 
-        print "*** Finished Linking ***"
+        log.debug("*** Finished Linking ***\n")
         sys.stdout.flush()
 
-    def mousePressEvent(self, event):
-        print "updating model"
-        self.adapter().update_model()
-
-    def paint(self, painter, option, widget):
-        painter.setPen(Qt.blue)
-        painter.drawRect(self.rect())
+#     def mousePressEvent(self, event):
+#         print "updating model"
+#         self.adapter().update_model()
+# 
+#     def paint(self, painter, option, widget):
+#         painter.setPen(Qt.blue)
+#         painter.drawRect(self.rect())
 
 
 class QtView(QGraphicsView, View):

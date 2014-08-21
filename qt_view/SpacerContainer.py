@@ -1,7 +1,9 @@
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from python_qt_binding.QtCore import *
+from python_qt_binding.QtGui import *
 from diarc.util import *
 import sys
+import logging
+log = logging.getLogger('qt_view.SpacerContainter')
 
 
 class SpacerContainer(QGraphicsWidget):
@@ -57,7 +59,7 @@ class SpacerContainer(QGraphicsWidget):
                 removalList.append(spacer)
             if spacer.itemB is not None and spacer.itemB == item:
                 removalList.append(spacer)
-        print "... removing %d spacers linked to item"%len(removalList)
+        log.debug("... removing %d spacers linked to item"%len(removalList))
         for spacer in removalList:
             spacer._release()
             self._spacers.remove(spacer)

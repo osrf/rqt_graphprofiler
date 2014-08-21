@@ -42,6 +42,7 @@
 from util import *
 from snapkey import *
 import types
+import logging
 
 class Topology(object):
     def __init__(self):
@@ -76,7 +77,7 @@ class Topology(object):
         """
         allBands = [band for edge in self._edges for band in [edge.posBand,edge.negBand]]
         if None is [band.altitude for band in allBands]:
-            print "WARNING: There are bands lacking altitude information! Not all bands are represented"
+            logging.warning("WARNING: There are bands lacking altitude information! Not all bands are represented")
         return dict([(band.altitude,band) for band in filter(lambda x: isinstance(x.altitude,int),allBands)])
 
     @property
@@ -114,9 +115,9 @@ class Vertex(object):
         self._block = Block(self)
 
     def release(self):
-        print "releasing vertex %r"%self
+        logging.debug("releasing vertex %r"%self)
 
-        print "... removing from topology"
+        logging.debug("... removing from topology")
         # Release yourself from the topology and remove the reference. This
         # needs to be done before destroying blocks, since we preclaculate 
         # block neighbors and that depends on iterating over the vertex list.
@@ -124,15 +125,15 @@ class Vertex(object):
         self._topology._vertices.remove(self)
 
         # Release connections to and from the vertex
-        print "... destroying connections"
+        logging.debug("... destroying connections")
         for connection in  self._topology._sources + self._topology._sinks:
             if connection.vertex == self:
                 connection.release()
-        print "... releasing associated block"
+        logging.debug("... releasing associated block")
         # Release the block object associated with this vertex 
         self._block._release()
         self._block = None
-        print "... destroying reference to topology"
+        logging.debug("... destroying reference to topology")
         self._topology = None
 
     @property
@@ -173,20 +174,20 @@ class Edge(object):
 
     def release(self):
         """ Removes this edge from the topology """
-        print "releasing edge %r"%self
+        logging.debug("releasing edge %r"%self)
         # Release connections to and from this edge
-        print "... destroying connections"
+        logging.debug("... destroying connections")
         for connection in self._topology._sources + self._topology._sinks:
             if connection.edge == self:
                 connection.release()
         # Release each of your bands
-        print "... releasing associated bands"
+        logging.debug("... releasing associated bands")
         self._pBand._release()
         self._nBand._release()
         # Remove references to your bands
         self._pBand = None
         self._nBand = None
-        print "... removing from topology"
+        logging.debug("... removing from topology")
         # Release youself from the topology
         self._topology._edges.remove(self)
         # Remove reference to the topology
@@ -229,11 +230,11 @@ class Connection(object):
         This does NOT release either the vertex or the edge objects, it simply
         removes this particular reference to them. 
         """
-        print "... releasing associated snap"
+        logging.debug("... releasing associated snap")
         # Release and remove the reference to your snap
         self._snap._release()
         self._snap = None
-        print "... deleting pointer to vertex and edge"
+        logging.debug("... deleting pointer to vertex and edge")
         # Remove references to vertex and edge
         self._vertex = None
         self._edge = None
@@ -268,10 +269,10 @@ class Source(Connection):
         self._topology._sources.append(self)
 
     def release(self):
-        print "Releasing Source %r"%self
+        logging.debug("Releasing Source %r"%self)
         super(Source,self).release()
         # Remove yourself from the topology
-        print "... removing from topology"
+        logging.debug("... removing from topology")
         self._topology._sources.remove(self)
         self._topology = None
 
@@ -288,10 +289,10 @@ class Sink(Connection):
         self._topology._sinks.append(self)
 
     def release(self):
-        print "Releasing Sink %r"%self
+        logging.debug("Releasing Sink %r"%self)
         super(Sink,self).release()
         # Remove youself from the topology
-        print "... removing from topology"
+        logging.debug("... removing from topology")
         self._topology._sinks.remove(self)
         self._topology = None
 
@@ -316,8 +317,8 @@ class Block(object):
         """ releases this block from the topology.
         This should only be called by Vertex.release()
         """
-        print "removing block %r"%self
-        print "... removing references to left and right blocks"
+        logging.debug("removing block %r"%self)
+        logging.debug("... removing references to left and right blocks")
         #This needs to recalculate the left and right blocks on either side
         #NOTE: This does not collapse index values, so there becomes a "hole"
         # in the index values
@@ -328,11 +329,11 @@ class Block(object):
         # Remove cached references to left and right blocks
 #         self._leftBlock = None
 #         self._rightBlock = None
-        print "... remove reference to vertex"
+        logging.debug("... remove reference to vertex")
         # We don't need to call release() on the vertex, it should already be
         # called, we just need to remove the reference
         self._vertex = None
-        print "... removing reference to topology"
+        logging.debug("... removing reference to topology")
         self._topology = None
 
 
@@ -483,10 +484,10 @@ class Band(object):
 
     def _release(self):
         """ Release all dependent references this object holds """
-        print "removing band %r"%self
-        print "... removing edge reference"
+        logging.debug("removing band %r"%self)
+        logging.debug("... removing edge reference")
         self._edge = None
-        print "... removing reference to topology"
+        logging.debug("... removing reference to topology")
         self._topology = None
 
 
@@ -605,6 +606,11 @@ class Band(object):
     def __get_rank(self):
         return self._rank
     def __set_rank(self,val):
+        if self._rank == val: return
+        # Allow "unsetting" rank
+        if val is None:
+            self._rank = val
+            return
         typecheck(val,int,"val")
         if val < 0:
             raise Exception("Rank must be >= 0, received %d"%val)
@@ -655,9 +661,9 @@ class Snap(object):
 
     def _release(self):
         """ This should only be called by a Connection.release() """
-        print "releasing snap %r"%self
+        logging.debug("releasing snap %r"%self)
         # the connection should 
-        print "... removing reference to connection"
+        logging.debug("... removing reference to connection")
         self._connection = None
 #         print "... removing reference to topology"
 #         self._topology = None
