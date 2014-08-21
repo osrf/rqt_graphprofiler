@@ -5,6 +5,9 @@ from view import SnapItemAttributes
 from adapter import Adapter
 from topology import *
 import sys
+import logging
+
+log = logging.getLogger('diarc.base_adapter')
 
 class BaseAdapter(Adapter):
     """ Basic implementation of the adapter interface.
@@ -26,7 +29,7 @@ class BaseAdapter(Adapter):
         attrs.border_color = "red"
         attrs.border_width = 0
         attrs.label = str(block_index)
-        attrs.label_rotation = -90
+#         attrs.label_rotation = -90
         attrs.label_color = "red"
         attrs.spacerwidth = 20
         return attrs
@@ -69,7 +72,7 @@ class BaseAdapter(Adapter):
             while isinstance(currIdx,int) and currIdx < (upperIdx or lowerIdx+1): # In case upperIdx is None, use lower+1
                 nextIdx = blocks[currIdx].rightBlock.index if blocks[currIdx].rightBlock else None
                 blocks[currIdx].index = lastIdx
-                print "%s -> %s"%(str(currIdx),str(lastIdx))
+                log.debug("%s -> %s"%(str(currIdx),str(lastIdx)))
                 lastIdx = currIdx
                 currIdx = nextIdx
             assert lastIdx == lowerIdx, "%r %r"%(lastIdx,upperIdx)
@@ -80,7 +83,7 @@ class BaseAdapter(Adapter):
             while isinstance(currIdx,int) and currIdx > lowerIdx:
                 nextIdx = blocks[currIdx].leftBlock.index if blocks[currIdx].leftBlock else None
                 blocks[currIdx].index = lastIdx
-                print "%s -> %s"%(str(currIdx),str(lastIdx))
+                log.debug("%s -> %s"%(str(currIdx),str(lastIdx)))
                 lastIdx = currIdx
                 currIdx = nextIdx
             assert lastIdx == upperIdx, "%r %r"%(lastIdx,upperIdx)
@@ -142,8 +145,8 @@ class BaseAdapter(Adapter):
         assert(container in ["emitter","collector"])
         block = self._topology.blocks[blockIdx]
         snaps = block.emitter if container == "emitter" else block.collector
-        print snaps.keys()
-        print "move snap",srcIdx,"between",lowerIdx,"and",upperIdx
+        log.debug("%s"%snaps.keys())
+        log.debug("move snap %s between %s and %s"%(srcIdx,lowerIdx,upperIdx))
 
         lastIdx = None
         currIdx = srcIdx
@@ -155,7 +158,7 @@ class BaseAdapter(Adapter):
             while isinstance(currIdx,int) and currIdx < (upperIdx or lowerIdx+1):
                 nextIdx = snaps[currIdx].rightSnap.order if snaps[currIdx].rightSnap else None
                 snaps[currIdx].order = lastIdx
-                print "%s -> %s"%(str(currIdx),str(lastIdx))
+                log.debug("%s -> %s"%(str(currIdx),str(lastIdx)))
                 lastIdx = currIdx
                 currIdx = nextIdx
             # Assertion check. TODO: Remove
@@ -168,7 +171,7 @@ class BaseAdapter(Adapter):
             while isinstance(currIdx,int) and currIdx > lowerIdx:
                 nextIdx = snaps[currIdx].leftSnap.order if snaps[currIdx].leftSnap else None
                 snaps[currIdx].order = lastIdx
-                print "%s -> %s"%(str(currIdx),str(lastIdx))
+                log.debug("%s -> %s"%(str(currIdx),str(lastIdx)))
                 lastIdx = currIdx
                 currIdx = nextIdx
             # Assertion check. TODO remove
@@ -186,6 +189,34 @@ class BaseAdapter(Adapter):
         self._update_view()
         return True
 
+    def bring_band_to_front(self, altitude):
+        bands = self._topology.bands
+
+        src_band = bands[altitude]
+        sibling_alts = [(alt, band.rank) for alt, band in bands.items() 
+                if (src_band.isPositive and band.altitude > 0 and band.rank >= src_band.rank) or 
+                (not src_band.isPositive and band.altitude < 0 and band.rank >= src_band.rank)]
+        if len(sibling_alts) <= 1:
+#             print "Band is already on top!"
+            return
+        # Order sibling altitudes by rank from lowest to highest
+        sibling_alts.sort(lambda x,y: x[1] - y[1])
+#         print "Bringing band with altitude %d to front of %s" % (src_band.altitude, sibling_alts)
+        # Get the highest rank value (what we want this band to have)
+        target_rank = max([x[1] for x in sibling_alts])
+#         print "target rank value is %d" % target_rank
+        # Strip rank information so we just have altitudes ordered by rank
+        sibling_alts = [x[0] for x in sibling_alts]
+        last_rank = src_band.rank
+        src_band.rank = None
+        for idx in range(1,len(sibling_alts)):
+            band = bands[sibling_alts[idx]]
+            next_rank = band.rank
+            band.rank = last_rank
+            last_rank = next_rank
+        src_band.rank = target_rank
+
+        self._update_view()
 
     def _update_view(self):
         """ updates the view - compute each items neigbors and then calls linking. """
@@ -254,9 +285,9 @@ class BaseAdapter(Adapter):
         # Update the SnapItem cache list
 #         self._cached_snap_item_snapkeys = snaps.keys()
 
-        print "*** Computing neighbors ***"
+        log.debug("*** Computing neighbors ***")
         sys.stdout.flush()
-        print "Blocks and snaps"
+        log.debug("Blocks and snaps")
         sys.stdout.flush()
         # Compute left and right blocks
         for index in blocks:
@@ -282,7 +313,7 @@ class BaseAdapter(Adapter):
                 pos_alt = snap.posBandLink.altitude if snap.posBandLink else None
                 neg_alt = snap.negBandLink.altitude if snap.negBandLink else None
                 self._view.set_snap_item_settings(snap.snapkey(), left_order, right_order, pos_alt, neg_alt)
-        print "bands"
+        log.debug("bands")
         sys.stdout.flush()
         # Compute top and bottom bands, rank, leftmost, and rightmost snaps
         for altitude in bands:
@@ -313,9 +344,8 @@ class BaseAdapter(Adapter):
             right_snapkey = right_snap.snapkey() if right_snap is not None else None
             self._view.set_band_item_settings(altitude, band.rank, top_alt, bot_alt, left_snapkey, right_snapkey )
 
-        print "*** Finished Computing neighbors ***"
-        print "*** Assigning Attributes ***"
-        sys.stdout.flush()
+        log.debug("*** Finished Computing neighbors ***")
+        log.debug("*** Assigning Attributes ***")
 
         # Update block visual attribtutes
         for index in self._cached_block_item_indexes:
@@ -331,9 +361,7 @@ class BaseAdapter(Adapter):
         for snapkey in self._cached_snap_item_snapkeys:
             attributes = self.get_snap_item_attributes(snapkey)
             self._view.set_snap_item_attributes(snapkey, attributes)
-        print "*** Finished Assigning Attributes ***"
-        sys.stdout.flush()
-
+        log.debug("*** Finished Assigning Attributes ***")
 
         self._view.update_view()
 

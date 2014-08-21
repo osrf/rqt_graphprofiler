@@ -5,6 +5,7 @@
 import sys
 sys.dont_write_bytecode = True
 import inspect
+import logging
 
 def asciiview(args):
     from diarc import parser
@@ -16,12 +17,17 @@ def asciiview(args):
     adapter._update_view()
 
 def qtview(args):
-    import PyQt4.QtGui
+    try:
+        import python_qt_binding.QtGui
+    except:
+        print "Error: python_qt_binding not installed."
+        print "Please install using `sudo pip install python_qt_binding`"
+        exit(-1)
     from diarc import parser
     from qt_view import qt_view
     from diarc import base_adapter
     topology = parser.parseFile(args[0])
-    app = PyQt4.QtGui.QApplication(sys.argv)
+    app = python_qt_binding.QtGui.QApplication(sys.argv)
     view = qt_view.QtView()
     adapter = base_adapter.BaseAdapter(topology, view)
     adapter._update_view()
@@ -30,10 +36,15 @@ def qtview(args):
     sys.exit(app.exec_())
 
 def rosview():
-    import PyQt4.QtGui
+    try:
+        import python_qt_binding.QtGui
+    except:
+        print "Error: python_qt_binding not installed."
+        print "Please install using `sudo pip install python_qt_binding`"
+        exit(-1)
     import qt_view
     import ros.ros_adapter
-    app = PyQt4.QtGui.QApplication([])
+    app = python_qt_binding.QtGui.QApplication([])
     view = qt_view.QtView()
     adapter = ros.ros_adapter.RosAdapter(view)
     adapter.update_model()
@@ -50,6 +61,8 @@ if __name__=="__main__":
     # Enable the next to rows to perform profiling
 #     rosview()
 #     exit()
+    logging.basicConfig(level=logging.DEBUG)
+    log = logging.getLogger('main')
 
     if len(sys.argv) < 2 or sys.argv[1] not in available_tests:
         print "Usage:\n ./test.py <test> [parameters]\n"
