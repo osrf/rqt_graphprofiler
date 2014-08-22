@@ -86,6 +86,9 @@ class Topic(Edge):
         self.name = name
         self.msgType = msgType
 
+        self.hz = 0
+        self.bw = 0
+
     @property
     def publishers(self):
         # NOTE: See note on Node class about why this MUST be a property.

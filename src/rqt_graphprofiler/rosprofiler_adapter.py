@@ -49,7 +49,6 @@ class ColorMapper(object):
         return self._used_colors[name]
 
     def release_unique_color(self, name):
-        print "... releasing color"
         if name in self._used_colors:
             if not self._used_colors[name] == "Gray":
                 self._choices.append(self._used_colors[name])
@@ -76,12 +75,17 @@ class ROSProfileAdapter(BaseAdapter):
         self._NODE_QUIET_LIST = list()
 
         # Data Buffers
+        # To improve accuracy, we hold onto data in the buffer for two evaluation
+        # periods (length of statistics timer). So we buffer the buffer...
         self._last_topology_received = Graph()
         self._node_statistics_buffer = dict() # name: list(NodeStatistics())
         self._host_statistics_buffer = dict() # hostname: list(HostStatistics())
-        self._topic_statistics_buffer = dict() # hostname: list(TopicStatistics())
+        self._topic_statistics_buffer = dict() # hostname: list(TopicStatistics()
+        self._previous_node_statistics_buffer = dict()
+        self._previous_host_statistics_buffer = dict()
+        self._previous_topic_statistics_buffer = dict()
 
-        # Callbacks
+        #Callbacks
         self.node_statistics_subscriber = rospy.Subscriber('/node_statistics', NodeStatistics, self._node_statistics_callback)
         self.topic_statistics_subscriber = rospy.Subscriber('/statistics', TopicStatistics, self._topic_statistics_callback)
         self.host_statistics_subscriber = rospy.Subscriber('/host_statistics', HostStatistics, self._host_statistics_callback)
@@ -243,10 +247,16 @@ class ROSProfileAdapter(BaseAdapter):
 
     def statistics_update(self):
         """ Updates the model with current statistics information """
-        rospy.loginfo("Updating Statistics")
+        rospy.logdebug("Updating Statistics")
+        # Combine current buffers with previous buffers for evaluation
+        node_statistics_buffer = dict(self._node_statistics_buffer.items() + self._previous_node_statistics_buffer.items())
+        host_statistics_buffer = dict(self._host_statistics_buffer.items() + self._previous_host_statistics_buffer.items())
+        topic_statistics_buffer = dict(self._topic_statistics_buffer.items() + self._previous_topic_statistics_buffer.items())
+
+
         # TODO: Requires a lock with the callback and other threads
         rsgNodes = self._topology.nodes 
-        for node_name, data_buffer in self._node_statistics_buffer.items():
+        for node_name, data_buffer in node_statistics_buffer.items():
             # Don't process node statistics that we do not have in our internal topology
             # (we don't have a place to store the information). 
             if node_name not in rsgNodes:
@@ -282,7 +292,50 @@ class ROSProfileAdapter(BaseAdapter):
                     [math.pow(sd,2)/n for sd,n in zip(virt_mem_std, samples)]))
             rsgNodes[node_name].virt_mem_max = max(virt_mem_max)
 
+        # Process Topic Statistics Data
+        # TODO: we are not currently processing all the topic data found in TopicStatistics() message
+        # TODO: These are actually piecewise between individual publishers and subscribers. 
+        #       Eventually we want to be able to draw each connections individual contribution to the
+        #       whole topic, but for now just lump it all together
+        rsgTopics = self._topology.topics
+        for topic_name, data_buffer in topic_statistics_buffer.items():
+            # Don't process topic statistics that we do not have in our internal topology
+            # (We don't have a place to store the information)
+            if topic_name not in rsgTopics:
+                if topic_name not in self._TOPIC_QUIET_LIST:
+                    rospy.logwarn("Received Statistics Information for untracked topic %s" % topic_name)
+                continue
+            # populate datasets for this topic
+            delivered_msgs = list()
+            traffic = list()
+            period_mean = list()
+            window_start = list()
+            window_stop = list()
+            node_sub = list() # we need to know the number of subscribers
+            for data in data_buffer:
+                delivered_msgs.append(data.delivered_msgs)
+                traffic.append(data.traffic)
+                period_mean.append(data.period_mean)
+                window_start.append(data.window_start.to_sec())
+                window_stop.append(data.window_stop.to_sec())
+                node_sub.append(data.node_sub)
+            # Approximate the hz (per subscriber)
+            start_time = min(window_start)
+            stop_time = max(window_stop)
+            total_msgs_sent = sum(delivered_msgs)
+            unique_subs = len(set(node_sub))
+            messages_sent = total_msgs_sent/unique_subs
+            hz = messages_sent/(stop_time-start_time)
+            rsgTopics[topic_name].hz = hz
+            # Approximate the bw in bytes per seconds (per subscriber)
+            bytes_sent = sum(traffic)/len(set(node_sub))
+            bw = bytes_sent/(stop_time-start_time)
+            rsgTopics[topic_name].bw = bw
+
         # Reset data buffers
+        self._previous_node_statistics_buffer = copy.copy(self._node_statistics_buffer)
+        self._previous_host_statistics_buffer = copy.copy(self._host_statistics_buffer)
+        self._previous_topic_statistics_buffer = copy.copy(self._topic_statistics_buffer)
         self._node_statistics_buffer.clear()
         self._host_statistics_buffer.clear()
         self._topic_statistics_buffer.clear()
@@ -310,7 +363,7 @@ class ROSProfileAdapter(BaseAdapter):
         attrs = BandItemAttributes()
         attrs.bgcolor = self._colormapper.get_unique_color(band.edge.name)
         attrs.border_color = "red"
-        attrs.tooltip_text = "Topic:\t%s\nBw:\nHz:" % (band.edge.name)
+        attrs.tooltip_text = "Topic:\t%s\nBw:\t%.2f bytes/sec\nHz:\t%.1f" % (band.edge.name, band.edge.bw, band.edge.hz)
         attrs.label = band.edge.name
         attrs.label_color = "white"
         attrs.width = 15
