@@ -319,16 +319,19 @@ class ROSProfileAdapter(BaseAdapter):
                 window_start.append(data.window_start.to_sec())
                 window_stop.append(data.window_stop.to_sec())
                 node_sub.append(data.node_sub)
-            # Approximate the hz (per subscriber)
             start_time = min(window_start)
             stop_time = max(window_stop)
-            total_msgs_sent = sum(delivered_msgs)
             unique_subs = len(set(node_sub))
+            # avoid divide by 0 errors
+            if stop_time == start_time or unique_subs == 0:
+                continue
+            # Approximate the hz (per subscriber)
+            total_msgs_sent = sum(delivered_msgs)
             messages_sent = total_msgs_sent/unique_subs
             hz = messages_sent/(stop_time-start_time)
             rsgTopics[topic_name].hz = hz
             # Approximate the bw in bytes per seconds (per subscriber)
-            bytes_sent = sum(traffic)/len(set(node_sub))
+            bytes_sent = sum(traffic)/unique_subs
             bw = bytes_sent/(stop_time-start_time)
             rsgTopics[topic_name].bw = bw
 
