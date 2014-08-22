@@ -2,19 +2,17 @@ import os
 import sys
 import logging
 
-from qt_gui.plugin import Plugin
-from python_qt_binding import loadUi
-from python_qt_binding.QtGui import QWidget
-from python_qt_binding.QtGui import QVBoxLayout
-from python_qt_binding.QtGui import QHBoxLayout
-from python_qt_binding.QtGui import QPushButton
 from python_qt_binding.QtGui import QCheckBox
+from python_qt_binding.QtGui import QHBoxLayout
 from python_qt_binding.QtGui import QIcon
+from python_qt_binding.QtGui import QPushButton
+from python_qt_binding.QtGui import QVBoxLayout
+from python_qt_binding.QtGui import QWidget
 
 import rospy
+from qt_gui.plugin import Plugin
 import rosprofiler_adapter
-from diarc import *
-from diarc import topology
+
 from diarc import qt_view
 
 from blacklist import BlacklistDialog
