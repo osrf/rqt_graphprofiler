@@ -366,7 +366,7 @@ class ROSProfileAdapter(BaseAdapter):
         attrs = BandItemAttributes()
         attrs.bgcolor = self._colormapper.get_unique_color(band.edge.name)
         attrs.border_color = "red"
-        attrs.tooltip_text = "Topic:\t%s\nBw:\t%.2f bytes/sec\nHz:\t%.1f" % (band.edge.name, band.edge.bw, band.edge.hz)
+        attrs.tooltip_text = "Topic:\t%s\nBw:\t%s/sec\nHz:\t%.1f" % (band.edge.name, sizeof_fmt(band.edge.bw), band.edge.hz)
         attrs.label = band.edge.name
         attrs.label_color = "white"
         attrs.width = 15
