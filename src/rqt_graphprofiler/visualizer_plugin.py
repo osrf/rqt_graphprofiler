@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+
 import os
 import sys
 import logging
@@ -23,7 +25,6 @@ from python_qt_binding.QtGui import QPushButton
 from python_qt_binding.QtGui import QVBoxLayout
 from python_qt_binding.QtGui import QWidget
 
-import rospy
 from qt_gui.plugin import Plugin
 import rosprofiler_adapter
 
@@ -121,21 +122,21 @@ class VisualizerWidget(QWidget):
 
     def _autorefresh_changed(self, value):
         if value == 2:
-            print "Enabling Autorefresh"
+            print("Enabling Autorefresh")
             self._adapter.enable_auto_update()
             self._refresh()
         elif value == 0:
-            print "Disabling Autorefresh"
+            print("Disabling Autorefresh")
             self._adapter.disable_auto_update()
         else:
             raise Exception()
 
     def _hidedisconnectedtopics_changed(self, value):
         if value == 2:
-            print "Hiding disconnected topics"
+            print("Hiding disconnected topics")
             self._adapter.hide_disconnected_topics()
         elif value == 0:
-            print "Showing disconnected topics"
+            print("Showing disconnected topics")
             self._adapter.show_disconnected_topics()
         else:
             raise Exception()

@@ -2,8 +2,8 @@ string hostname
 string ipaddress
 
 # data applies during this time window.
-# This information can be regarded as stale if the time since window_stop is 
-# more than twice the duration between window_start and window_stop 
+# This information can be regarded as stale if the time since window_stop is
+# more than twice the duration between window_start and window_stop
 time window_start
 time window_stop
 

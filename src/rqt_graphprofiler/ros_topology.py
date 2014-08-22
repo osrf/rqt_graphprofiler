@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 diarc topology data structures for ROS
 This renames some things into ROS terminology to be more conveient, and also
@@ -48,12 +49,12 @@ class RosSystemGraph(Topology):
 
     def nextFreeNodeIndex(self):
         """ returns the next available node index """
-        return max(self.blocks.keys())+1 if len(self.blocks) > 0 else 0
+        return max(self.blocks.keys()) + 1 if len(self.blocks) > 0 else 0
 
     def nextFreeAltitudes(self):
         """ returns a 2-tuple of (posAltitude,negAltitude) of the avaliable altitudes """
         altitudes = [band.altitude for band in self.bands.values()] + [0]
-        return (max(altitudes)+1, min(altitudes)-1)
+        return (max(altitudes) + 1, min(altitudes) - 1)
 
 
 class Node(Vertex):
@@ -132,7 +133,7 @@ class Publisher(Source):
         typecheck(topic, Topic, "topic")
         super(Publisher, self).__init__(rsg, node, topic)
         # Dumb placement
-        self.snap.order = max(filter(lambda x: isinstance(x, int), [pub.snap.order for pub in node.publishers] + [-1]))+1
+        self.snap.order = max(filter(lambda x: isinstance(x, int), [pub.snap.order for pub in node.publishers] + [-1])) + 1
 
         self.bandwidth = None
         self.msgType = None
@@ -159,7 +160,7 @@ class Subscriber(Sink):
         super(Subscriber, self).__init__(rsg, node, topic)
 
         # Dumb placement
-        self.snap.order = max(filter(lambda x: isinstance(x, int), [sub.snap.order for sub in node.subscribers] + [-1]))+1
+        self.snap.order = max(filter(lambda x: isinstance(x, int), [sub.snap.order for sub in node.subscribers] + [-1])) + 1
 
         self.bandwidth = None
         self.msgType = None

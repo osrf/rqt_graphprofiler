@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+
 import threading
 import copy
 import math
@@ -188,11 +190,11 @@ class ROSProfileAdapter(BaseAdapter):
         allCurrentTopicNames = [t.name for t in data.topics]
         for topic in rsgTopics.values():
             if topic.name in self._TOPIC_QUIET_LIST:
-                print "Removing Topic", topic.name, "found in quiet list"
+                print("Removing Topic", topic.name, "found in quiet list")
                 self._colormapper.release_unique_color(topic.name)
                 topic.release()
             elif topic.name not in allCurrentTopicNames:
-                print "Removing Topic", topic.name, "not found in ", allCurrentTopicNames
+                print("Removing Topic", topic.name, "not found in ", allCurrentTopicNames)
                 self._colormapper.release_unique_color(topic.name)
                 topic.release()
 
@@ -208,10 +210,10 @@ class ROSProfileAdapter(BaseAdapter):
         allCurrentNodeNames = [n.name for n in data.nodes]
         for node in rsgNodes.values():
             if node.name in self._NODE_QUIET_LIST:
-                print "Removing node", node.name, "found on quiet list"
+                print("Removing node", node.name, "found on quiet list")
                 node.release()
             elif node.name not in allCurrentNodeNames:
-                print "Removing Node", node.name, "not found in ", allCurrentNodeNames
+                print("Removing Node", node.name, "not found in ", allCurrentNodeNames)
                 node.release()
                 # TODO: Remove any of the nodes publishers or subscribers now
 
@@ -345,12 +347,12 @@ class ROSProfileAdapter(BaseAdapter):
                 continue
             # Approximate the hz (per subscriber)
             total_msgs_sent = sum(delivered_msgs)
-            messages_sent = total_msgs_sent/unique_subs
-            hz = messages_sent/(stop_time-start_time)
+            messages_sent = total_msgs_sent / unique_subs
+            hz = messages_sent / (stop_time - start_time)
             rsgTopics[topic_name].hz = hz
             # Approximate the bw in bytes per seconds (per subscriber)
-            bytes_sent = sum(traffic)/unique_subs
-            bw = bytes_sent/(stop_time-start_time)
+            bytes_sent = sum(traffic) / unique_subs
+            bw = bytes_sent / (stop_time - start_time)
             rsgTopics[topic_name].bw = bw
 
         # Reset data buffers
