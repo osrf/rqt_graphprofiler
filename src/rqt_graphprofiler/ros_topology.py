@@ -14,7 +14,7 @@
 """
 diarc topology data structures for ROS
 This renames some things into ROS terminology to be more conveient, and also
-adds some attributes we want to track. 
+adds some attributes we want to track.
 
 Renaming Looks like this
   Vertex = Node
@@ -48,14 +48,12 @@ class RosSystemGraph(Topology):
 
     def nextFreeNodeIndex(self):
         """ returns the next available node index """
-        return max(self.blocks.keys())+1 if len(self.blocks)>0 else 0
-    
+        return max(self.blocks.keys())+1 if len(self.blocks) > 0 else 0
+
     def nextFreeAltitudes(self):
         """ returns a 2-tuple of (posAltitude,negAltitude) of the avaliable altitudes """
         altitudes = [band.altitude for band in self.bands.values()] + [0]
         return (max(altitudes)+1, min(altitudes)-1)
-
-
 
 
 class Node(Vertex):
@@ -83,7 +81,7 @@ class Node(Vertex):
     @property
     def publishers(self):
         """ returns publishers """
-        # NOTE: This must be a property function (instead of just saying 
+        # NOTE: This must be a property function (instead of just saying
         # self.publishers = self.sources in the constructor) because self.sources
         # just returns a static list once, and we need this to be dynamically
         # queried every time we ask. This is because Vertex.sources and Edge.sources
@@ -101,7 +99,7 @@ class Topic(Edge):
     def __init__(self, rsg, name=None, msgType=None):
         typecheck(rsg, RosSystemGraph, "rsg")
         super(Topic, self).__init__(rsg)
-        
+
         # Dumb placement - just get the enxt free altitudes
         self.posBand.altitude, self.negBand.altitude = rsg.nextFreeAltitudes()
         self.posBand.rank = self.posBand.altitude
@@ -124,8 +122,6 @@ class Topic(Edge):
         """ list of subscribers """
         # NOTE: See note on Node class about why this MUST be a property.
         return self.sinks
-
-
 
 
 class Publisher(Source):
@@ -153,6 +149,7 @@ class Publisher(Source):
         # NOTE: See note on Node class about why this MUST be a property.
         return self.vertex
 
+
 class Subscriber(Sink):
     """ ROS version of a sink """
     def __init__(self, rsg, node, topic):
@@ -178,5 +175,3 @@ class Subscriber(Sink):
         """ node for this subscriber """
         # NOTE: See note on Node class about why this MUST be a property.
         return self.vertex
-
-

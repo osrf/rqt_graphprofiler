@@ -34,24 +34,25 @@ from blacklist import BlacklistDialog
 TOPIC_BLACKLIST = ['/clock', '/topology', '/statistics']
 NODE_BLACKLIST = ['/rosout']
 
-# set this environment variable to enable diarc debug printing 
+# set this environment variable to enable diarc debug printing
 if 'DIARC_DEBUG' in os.environ:
     logging.getLogger('diarc').setLevel(logging.DEBUG)
     ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(logging.DEBUG)
     logging.getLogger('diarc').addHandler(ch)
 
+
 class VisualizerPlugin(Plugin):
     def __init__(self, context):
         super(VisualizerPlugin, self).__init__(context)
         self.setObjectName('VisualizerPlugin')
-        
+
         # Process standalone plugin command-line arguments
         from argparse import ArgumentParser
         parser = ArgumentParser()
         # Add argument(s) to the parser.
         parser.add_argument("-q", "--quiet", action="store_true",
-                        dest="quiet", help="Put plugin in silent mode")
+                            dest="quiet", help="Put plugin in silent mode")
         args, unknowns = parser.parse_known_args(context.argv())
 
         context.add_widget(VisualizerWidget())
@@ -64,6 +65,7 @@ class VisualizerPlugin(Plugin):
 
     def restore_settings(self, plugin_settings, instance_settings):
         pass
+
 
 class VisualizerWidget(QWidget):
     def __init__(self, parent=None):
@@ -109,7 +111,7 @@ class VisualizerWidget(QWidget):
         topic_blacklist = BlacklistDialog.get_blacklist(values=topics)
         self._adapter.set_topic_quiet_list(topic_blacklist)
         self._adapter.topology_update()
-        
+
     def _edit_node_blacklist(self):
         """ Opens node blacklist Dialog and modifies the blacklist """
         nodes = self._adapter.get_node_quiet_list()

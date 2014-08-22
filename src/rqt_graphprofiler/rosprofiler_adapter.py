@@ -21,20 +21,19 @@ import random
 import rospy
 from ros_statistics_msgs.msg import HostStatistics
 from ros_statistics_msgs.msg import NodeStatistics
-from ros_topology_msgs.msg import Connection
+# from ros_topology_msgs.msg import Connection
 from ros_topology_msgs.msg import Graph
-from ros_topology_msgs.msg import Node
-from ros_topology_msgs.msg import Service
-from ros_topology_msgs.msg import Topic
+# from ros_topology_msgs.msg import Node
+# from ros_topology_msgs.msg import Service
+# from ros_topology_msgs.msg import Topic
 from rosgraph_msgs.msg import TopicStatistics
 
-from diarc import topology
+# from diarc import topology
 from diarc.base_adapter import BaseAdapter
 from diarc.view import BlockItemAttributes
 from diarc.view import BandItemAttributes
 from diarc.view import SnapItemAttributes
 import ros_topology as rsg
-
 
 
 class ColorMapper(object):
@@ -43,17 +42,17 @@ class ColorMapper(object):
         # Reds
         self._choices.extend(["IndianRed", "DarkSalmon", "Crimson"])
         # Pinks
-        self._choices.extend(["HotPink","DeepPink"])
+        self._choices.extend(["HotPink", "DeepPink"])
         # Oranges
-        self._choices.extend(["Coral","OrangeRed","DarkOrange"])
+        self._choices.extend(["Coral", "OrangeRed", "DarkOrange"])
         # Yellows
-        self._choices.extend(["Gold","DarkKhaki"])
+        self._choices.extend(["Gold", "DarkKhaki"])
         # Purples
-        self._choices.extend(["Thistle","Orchid","MediumPurple","DarkOrchid","Purple","Indigo","DarkSlateBlue"])
+        self._choices.extend(["Thistle", "Orchid", "MediumPurple", "DarkOrchid", "Purple", "Indigo", "DarkSlateBlue"])
         # Greens
-        self._choices.extend(["LawnGreen","LimeGreen","MediumSeaGreen","ForestGreen","OliveDrab","Olive","DarkOliveGreen","DarkCyan"])
+        self._choices.extend(["LawnGreen", "LimeGreen", "MediumSeaGreen", "ForestGreen", "OliveDrab", "Olive", "DarkOliveGreen", "DarkCyan"])
         # Blues
-        self._choices.extend(["PaleTurquoise","Turquoise","CadetBlue","SteelBlue","DodgerBlue"])
+        self._choices.extend(["PaleTurquoise", "Turquoise", "CadetBlue", "SteelBlue", "DodgerBlue"])
         # Browns
 #         self._choices.extend(["Cornsilk","Tan","RosyBrown","SandyBrown","Goldenrod","DarkGoldenrod","SaddleBrown"])
         self._used_colors = dict()
@@ -75,6 +74,7 @@ class ColorMapper(object):
         else:
             rospy.logwarn("Unknown name mapped to color!")
 
+
 class ROSProfileAdapter(BaseAdapter):
     """ Implementes the Adapter interface for the View and provides hooks for
     populating and implementing the ros specific version of the topology.
@@ -82,8 +82,8 @@ class ROSProfileAdapter(BaseAdapter):
     Publishes this combined information as /profile
     """
 
-    def __init__(self,view):
-        super(ROSProfileAdapter,self).__init__(rsg.RosSystemGraph(),view)
+    def __init__(self, view):
+        super(ROSProfileAdapter, self).__init__(rsg.RosSystemGraph(), view)
         self._topology.hide_disconnected_snaps = True
 
         self._colormapper = ColorMapper()
@@ -97,14 +97,14 @@ class ROSProfileAdapter(BaseAdapter):
         # To improve accuracy, we hold onto data in the buffer for two evaluation
         # periods (length of statistics timer). So we buffer the buffer...
         self._last_topology_received = Graph()
-        self._node_statistics_buffer = dict() # name: list(NodeStatistics())
-        self._host_statistics_buffer = dict() # hostname: list(HostStatistics())
-        self._topic_statistics_buffer = dict() # hostname: list(TopicStatistics()
+        self._node_statistics_buffer = dict()  # name: list(NodeStatistics())
+        self._host_statistics_buffer = dict()  # hostname: list(HostStatistics())
+        self._topic_statistics_buffer = dict()  # hostname: list(TopicStatistics()
         self._previous_node_statistics_buffer = dict()
         self._previous_host_statistics_buffer = dict()
         self._previous_topic_statistics_buffer = dict()
 
-        #Callbacks
+        # Callbacks
         self.node_statistics_subscriber = rospy.Subscriber('/node_statistics', NodeStatistics, self._node_statistics_callback)
         self.topic_statistics_subscriber = rospy.Subscriber('/statistics', TopicStatistics, self._topic_statistics_callback)
         self.host_statistics_subscriber = rospy.Subscriber('/host_statistics', HostStatistics, self._host_statistics_callback)
@@ -112,7 +112,7 @@ class ROSProfileAdapter(BaseAdapter):
         self._lock = threading.Lock()
 
         # Timers
-        self._stats_timer = rospy.Timer(rospy.Duration(2.0),lambda x: self.statistics_update())
+        self._stats_timer = rospy.Timer(rospy.Duration(2.0), lambda x: self.statistics_update())
 
     def set_topic_quiet_list(self, topic_names):
         rospy.loginfo("Updating topic quiet list to %r" % topic_names)
@@ -130,14 +130,14 @@ class ROSProfileAdapter(BaseAdapter):
     def enable_auto_update(self):
         """ Automatically update the visualization when information is received """
         self._auto_update = True
-        self._stats_timer = rospy.Timer(rospy.Duration(2.0),lambda x: self.statistics_update())
+        self._stats_timer = rospy.Timer(rospy.Duration(2.0), lambda x: self.statistics_update())
 
     def disable_auto_update(self):
         """ buffer information received from ROS, but do not automatically update the visualization """
         self._auto_update = False
         self._stats_timer.shutdown()
         self._stats_timer = None
-    
+
     def show_disconnected_topics(self):
         self._topology.hide_disconnected_snaps = False
         self.topology_update()
@@ -148,7 +148,7 @@ class ROSProfileAdapter(BaseAdapter):
 
     def _node_statistics_callback(self, data):
         """ Buffers NodeStatistics data """
-#         latency = rospy.get_rostime() - data.window_stop 
+#         latency = rospy.get_rostime() - data.window_stop
 #         window = data.window_stop - data.window_start
 #         margin = window*2 - latency
 #         if margin.to_sec() > 0:
@@ -158,7 +158,7 @@ class ROSProfileAdapter(BaseAdapter):
         if data.node not in self._node_statistics_buffer:
             self._node_statistics_buffer[data.node] = list()
         self._node_statistics_buffer[data.node].append(data)
-        
+
     def _topic_statistics_callback(self, data):
         """ Buffers TopicStatistics data """
         # Buffer Topic Statistics Data.
@@ -188,11 +188,11 @@ class ROSProfileAdapter(BaseAdapter):
         allCurrentTopicNames = [t.name for t in data.topics]
         for topic in rsgTopics.values():
             if topic.name in self._TOPIC_QUIET_LIST:
-                print "Removing Topic",topic.name, "found in quiet list"
+                print "Removing Topic", topic.name, "found in quiet list"
                 self._colormapper.release_unique_color(topic.name)
                 topic.release()
             elif topic.name not in allCurrentTopicNames:
-                print "Removing Topic",topic.name, "not found in ",allCurrentTopicNames
+                print "Removing Topic", topic.name, "not found in ", allCurrentTopicNames
                 self._colormapper.release_unique_color(topic.name)
                 topic.release()
 
@@ -200,7 +200,7 @@ class ROSProfileAdapter(BaseAdapter):
         for topic in data.topics:
             if topic.name not in rsgTopics and topic.name not in self._TOPIC_QUIET_LIST:
                 topic = rsg.Topic(self._topology, topic.name, topic.type)
-        
+
         # Get all the nodes we currently know about
         rsgNodes = self._topology.nodes
 
@@ -208,10 +208,10 @@ class ROSProfileAdapter(BaseAdapter):
         allCurrentNodeNames = [n.name for n in data.nodes]
         for node in rsgNodes.values():
             if node.name in self._NODE_QUIET_LIST:
-                print "Removing node",node.name,"found on quiet list"
+                print "Removing node", node.name, "found on quiet list"
                 node.release()
             elif node.name not in allCurrentNodeNames:
-                print "Removing Node",node.name, "not found in ",allCurrentNodeNames
+                print "Removing Node", node.name, "not found in ", allCurrentNodeNames
                 node.release()
                 # TODO: Remove any of the nodes publishers or subscribers now
 
@@ -221,21 +221,21 @@ class ROSProfileAdapter(BaseAdapter):
             if node.name in self._NODE_QUIET_LIST:
                 continue
             rsg_node = None
-            if node.name not in rsgNodes: # and name not in QUIET_NAMES:
+            if node.name not in rsgNodes:  # and name not in QUIET_NAMES:
                 rsg_node = rsg.Node(self._topology, node.name)
                 rsg_node.location = node.uri
             else:
                 rsg_node = self._topology.nodes[node.name]
                 if not rsg_node.location == node.uri:
-                    rospy.logerr("rsg_node and data.node uri's do not match for name %s"%node.name)
+                    rospy.logerr("rsg_node and data.node uri's do not match for name %s" % node.name)
 
             # Filter published and subscribed topics we are ignoring
             publishes_list = [p for p in node.publishes if p not in self._TOPIC_QUIET_LIST]
             subscribes_list = [s for s in node.subscribes if s not in self._TOPIC_QUIET_LIST]
-             
+
             # Add and remove publishers for this node only
             # Compile two dictionaries, one of existing topics and one of the most recently
-            # reported topics. Remove existing publishers that are not mentioned in the 
+            # reported topics. Remove existing publishers that are not mentioned in the
             # current list, add publishers that not in the existing list but in the current list,
             # and update publishers that occur in both lists.
             existing_rsg_node_pub_topics = dict([(publisher.topic.name, publisher) for publisher in rsg_node.publishers])
@@ -272,12 +272,11 @@ class ROSProfileAdapter(BaseAdapter):
         host_statistics_buffer = dict(self._host_statistics_buffer.items() + self._previous_host_statistics_buffer.items())
         topic_statistics_buffer = dict(self._topic_statistics_buffer.items() + self._previous_topic_statistics_buffer.items())
 
-
         # TODO: Requires a lock with the callback and other threads
-        rsgNodes = self._topology.nodes 
+        rsgNodes = self._topology.nodes
         for node_name, data_buffer in node_statistics_buffer.items():
             # Don't process node statistics that we do not have in our internal topology
-            # (we don't have a place to store the information). 
+            # (we don't have a place to store the information).
             if node_name not in rsgNodes:
                 if node_name not in self._NODE_QUIET_LIST:
                     rospy.logwarn("Received Statistics Information for untracked node %s" % node_name)
@@ -304,16 +303,16 @@ class ROSProfileAdapter(BaseAdapter):
             rsgNodes[node_name].num_threads = max(num_threads)
             rsgNodes[node_name].cpu_load_mean = np.mean(np.array(cpu_load_mean))
             rsgNodes[node_name].cpu_load_std = math.sqrt(sum(
-                    [math.pow(sd,2)/n for sd,n in zip(cpu_load_std, samples)]))
+                    [math.pow(sd, 2)/n for sd, n in zip(cpu_load_std, samples)]))
             rsgNodes[node_name].cpu_load_max = max(cpu_load_max)
             rsgNodes[node_name].virt_mem_mean = np.mean(np.array(virt_mem_mean))
             rsgNodes[node_name].virt_mem_std = math.sqrt(sum(
-                    [math.pow(sd,2)/n for sd,n in zip(virt_mem_std, samples)]))
+                    [math.pow(sd, 2)/n for sd, n in zip(virt_mem_std, samples)]))
             rsgNodes[node_name].virt_mem_max = max(virt_mem_max)
 
         # Process Topic Statistics Data
         # TODO: we are not currently processing all the topic data found in TopicStatistics() message
-        # TODO: These are actually piecewise between individual publishers and subscribers. 
+        # TODO: These are actually piecewise between individual publishers and subscribers.
         #       Eventually we want to be able to draw each connections individual contribution to the
         #       whole topic, but for now just lump it all together
         rsgTopics = self._topology.topics
@@ -330,7 +329,7 @@ class ROSProfileAdapter(BaseAdapter):
             period_mean = list()
             window_start = list()
             window_stop = list()
-            node_sub = list() # we need to know the number of subscribers
+            node_sub = list()  # we need to know the number of subscribers
             for data in data_buffer:
                 delivered_msgs.append(data.delivered_msgs)
                 traffic.append(data.traffic)
@@ -363,7 +362,6 @@ class ROSProfileAdapter(BaseAdapter):
         self._topic_statistics_buffer.clear()
 
         self._update_view()
-
 
     def get_block_item_attributes(self, block_index):
         """ Overloads the BaseAdapters stock implementation of this method """
@@ -402,12 +400,10 @@ class ROSProfileAdapter(BaseAdapter):
         attrs.width = 20
         return attrs
 
-    
+
 def sizeof_fmt(num):
     # Taken from http://stackoverflow.com/a/1094933
-    for x in ['bytes','KB','MB','GB','TB']:
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
-
-

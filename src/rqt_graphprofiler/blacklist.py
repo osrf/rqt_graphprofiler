@@ -1,4 +1,4 @@
-""" Blacklist 
+""" Blacklist
 Provides a blacklist editing dialog.
 
 from python_qt_binding.QtGui import QApplication
@@ -62,7 +62,7 @@ class BlacklistDialog(QDialog):
         return self._blacklist.get_values()
 
     @staticmethod
-    def get_blacklist(parent=None, values=None): 
+    def get_blacklist(parent=None, values=None):
         """ Get a modified blacklist
         :param list values: current blacklisted values to populate the dialog with
         :returns: revised list if Ok is pressed, else values
@@ -70,6 +70,7 @@ class BlacklistDialog(QDialog):
         dialog = BlacklistDialog(parent=parent, current_values=values)
         result = dialog.exec_()
         return dialog.get_values() if result == QDialog.Accepted else values
+
 
 class Blacklist(QListView):
     """ an editable list of strings """
@@ -115,4 +116,3 @@ class Blacklist(QListView):
     def get_values(self):
         """ returns the values stored in the list """
         return [str(val) for val in self._model.stringList()]
-
