@@ -77,7 +77,9 @@ class ROSProfileAdapter(BaseAdapter):
 
         # Data Buffers
         self._last_topology_received = Graph()
-        self._last_node_statistics_received = dict() # name: NodeStatistics()
+        self._node_statistics_buffer = dict() # name: list(NodeStatistics())
+        self._host_statistics_buffer = dict() # hostname: list(HostStatistics())
+        self._topic_statistics_buffer = dict() # hostname: list(TopicStatistics())
 
         # Callbacks
         self.node_statistics_subscriber = rospy.Subscriber('/node_statistics', NodeStatistics, self._node_statistics_callback)
@@ -122,7 +124,7 @@ class ROSProfileAdapter(BaseAdapter):
         self.topology_update()
 
     def _node_statistics_callback(self, data):
-        """ Receives NodeStatistics() information and stores it in a buffer """
+        """ Buffers NodeStatistics data """
 #         latency = rospy.get_rostime() - data.window_stop 
 #         window = data.window_stop - data.window_start
 #         margin = window*2 - latency
@@ -130,15 +132,24 @@ class ROSProfileAdapter(BaseAdapter):
 #             rospy.logerr("Data from '%s' too old by %f secs"%(data.node,-margin.to_sec()))
 #             return
         # If we have not collected any data from this node yet, initialize the node's buffer
-        if data.node not in self._last_node_statistics_received:
-            self._last_node_statistics_received[data.node] = list()
-        self._last_node_statistics_received[data.node].append(data)
+        if data.node not in self._node_statistics_buffer:
+            self._node_statistics_buffer[data.node] = list()
+        self._node_statistics_buffer[data.node].append(data)
         
     def _topic_statistics_callback(self, data):
-        pass
+        """ Buffers TopicStatistics data """
+        # Buffer Topic Statistics Data.
+        if data.topic not in self._topic_statistics_buffer:
+            self._topic_statistics_buffer[data.topic] = list()
+        self._topic_statistics_buffer[data.topic].append(data)
 
     def _host_statistics_callback(self, data):
-        pass
+        """ Buffers HostStatistics data """
+        # This information is useful for drawing NodeStatistics information
+        # in context to nodes running on other machines
+        if data.hostname not in self._host_statistics_buffer:
+            self._host_statistics_buffer[data.hostname] = list()
+        self._host_statistics_buffer[data.hostname].append(data)
 
     def _topology_callback(self, data):
         self._last_topology_received = copy.copy(data)
@@ -235,7 +246,7 @@ class ROSProfileAdapter(BaseAdapter):
         rospy.loginfo("Updating Statistics")
         # TODO: Requires a lock with the callback and other threads
         rsgNodes = self._topology.nodes 
-        for node_name, data_buffer in self._last_node_statistics_received.items():
+        for node_name, data_buffer in self._node_statistics_buffer.items():
             # Don't process node statistics that we do not have in our internal topology
             # (we don't have a place to store the information). 
             if node_name not in rsgNodes:
@@ -270,7 +281,11 @@ class ROSProfileAdapter(BaseAdapter):
             rsgNodes[node_name].virt_mem_std = math.sqrt(sum(
                     [math.pow(sd,2)/n for sd,n in zip(virt_mem_std, samples)]))
             rsgNodes[node_name].virt_mem_max = max(virt_mem_max)
-        self._last_node_statistics_received.clear()
+
+        # Reset data buffers
+        self._node_statistics_buffer.clear()
+        self._host_statistics_buffer.clear()
+        self._topic_statistics_buffer.clear()
 
         self._update_view()
 
