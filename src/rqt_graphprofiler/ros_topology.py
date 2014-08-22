@@ -10,20 +10,28 @@
 #   Sink = Subscriber
 #   Source = Publisher
 #
-from diarc.topology import *
+from diarc.topology import Topology
+from diarc.topology import Vertex
+from diarc.topology import Edge
+from diarc.topology import Source
+from diarc.topology import Sink
 from diarc.util import typecheck
 
+
 class RosSystemGraph(Topology):
+    """ Ros version of Topology """
     def __init__(self):
-        super(RosSystemGraph,self).__init__()
+        super(RosSystemGraph, self).__init__()
 
     @property
     def nodes(self):
-        return dict([(v.name,v) for v in self.vertices])
+        """ dictionary of nodes indexed by name """
+        return dict([(v.name, v) for v in self.vertices])
 
     @property
     def topics(self):
-        return dict(filter(lambda x: None not in x, [(topic.name,topic) for topic in self.edges]))
+        """ dictionary of topics indexed by name """
+        return dict(filter(lambda x: None not in x, [(topic.name, topic) for topic in self.edges]))
 
     def nextFreeNodeIndex(self):
         """ returns the next available node index """
@@ -32,15 +40,15 @@ class RosSystemGraph(Topology):
     def nextFreeAltitudes(self):
         """ returns a 2-tuple of (posAltitude,negAltitude) of the avaliable altitudes """
         altitudes = [band.altitude for band in self.bands.values()] + [0]
-        return (max(altitudes)+1,min(altitudes)-1)
+        return (max(altitudes)+1, min(altitudes)-1)
 
 
 
 
 class Node(Vertex):
-    def __init__(self,rsg,name=None):
-        typecheck(rsg,RosSystemGraph,"rsg")
-        super(Node,self).__init__(rsg)
+    def __init__(self, rsg, name=None):
+        typecheck(rsg, RosSystemGraph, "rsg")
+        super(Node, self).__init__(rsg)
 
         # dumb placement - just get the next free index
         self.block.index = rsg.nextFreeNodeIndex()
@@ -61,6 +69,7 @@ class Node(Vertex):
 
     @property
     def publishers(self):
+        """ returns publishers """
         # NOTE: This must be a property function (instead of just saying 
         # self.publishers = self.sources in the constructor) because self.sources
         # just returns a static list once, and we need this to be dynamically
@@ -70,16 +79,18 @@ class Node(Vertex):
 
     @property
     def subscribers(self):
+        """ return subscribers """
         return self.sinks
 
 
 class Topic(Edge):
-    def __init__(self,rsg,name=None,msgType=None):
-        typecheck(rsg,RosSystemGraph,"rsg")
-        super(Topic,self).__init__(rsg)
+    """ ROS version of an Edge """
+    def __init__(self, rsg, name=None, msgType=None):
+        typecheck(rsg, RosSystemGraph, "rsg")
+        super(Topic, self).__init__(rsg)
         
         # Dumb placement - just get the enxt free altitudes
-        self.posBand.altitude,self.negBand.altitude = rsg.nextFreeAltitudes()
+        self.posBand.altitude, self.negBand.altitude = rsg.nextFreeAltitudes()
         self.posBand.rank = self.posBand.altitude
         self.negBand.rank = self.posBand.altitude
 
@@ -91,11 +102,13 @@ class Topic(Edge):
 
     @property
     def publishers(self):
+        """ list of publishers """
         # NOTE: See note on Node class about why this MUST be a property.
         return self.sources
 
     @property
     def subscribers(self):
+        """ list of subscribers """
         # NOTE: See note on Node class about why this MUST be a property.
         return self.sinks
 
@@ -103,47 +116,53 @@ class Topic(Edge):
 
 
 class Publisher(Source):
-    def __init__(self,rsg,node,topic):
-        typecheck(rsg,RosSystemGraph,"rsg")
-        typecheck(node,Node,"node")
-        typecheck(topic,Topic,"topic")
-        super(Publisher,self).__init__(rsg,node,topic)
+    """ ROS Version of a source """
+    def __init__(self, rsg, node, topic):
+        typecheck(rsg, RosSystemGraph, "rsg")
+        typecheck(node, Node, "node")
+        typecheck(topic, Topic, "topic")
+        super(Publisher, self).__init__(rsg, node, topic)
         # Dumb placement
-        self.snap.order = max(filter(lambda x: isinstance(x,int), [pub.snap.order for pub in node.publishers] + [-1]))+1
+        self.snap.order = max(filter(lambda x: isinstance(x, int), [pub.snap.order for pub in node.publishers] + [-1]))+1
 
         self.bandwidth = None
         self.msgType = None
 
     @property
     def topic(self):
+        """ topic for this publisher """
         # NOTE: See note on Node class about why this MUST be a property.
         return self.edge
 
     @property
     def node(self):
+        """ node for this publisher """
         # NOTE: See note on Node class about why this MUST be a property.
         return self.vertex
 
 class Subscriber(Sink):
-    def __init__(self,rsg,node,topic):
-        typecheck(rsg,RosSystemGraph,"rsg")
-        typecheck(node,Node,"node")
-        typecheck(topic,Topic,"topic")
-        super(Subscriber,self).__init__(rsg,node,topic)
+    """ ROS version of a sink """
+    def __init__(self, rsg, node, topic):
+        typecheck(rsg, RosSystemGraph, "rsg")
+        typecheck(node, Node, "node")
+        typecheck(topic, Topic, "topic")
+        super(Subscriber, self).__init__(rsg, node, topic)
 
         # Dumb placement
-        self.snap.order = max(filter(lambda x: isinstance(x,int), [sub.snap.order for sub in node.subscribers] + [-1]))+1
+        self.snap.order = max(filter(lambda x: isinstance(x, int), [sub.snap.order for sub in node.subscribers] + [-1]))+1
 
         self.bandwidth = None
         self.msgType = None
 
     @property
     def topic(self):
+        """ topic for this subscriber """
         # NOTE: See note on Node class about why this MUST be a property.
         return self.edge
 
     @property
     def node(self):
+        """ node for this subscriber """
         # NOTE: See note on Node class about why this MUST be a property.
         return self.vertex
 
