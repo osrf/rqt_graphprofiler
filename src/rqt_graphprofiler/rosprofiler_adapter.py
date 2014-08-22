@@ -36,7 +36,7 @@ class ColorMapper(object):
         # Blues
         self._choices.extend(["PaleTurquoise","Turquoise","CadetBlue","SteelBlue","DodgerBlue"])
         # Browns
-        self._choices.extend(["Cornsilk","Tan","RosyBrown","SandyBrown","Goldenrod","DarkGoldenrod","SaddleBrown"])
+#         self._choices.extend(["Cornsilk","Tan","RosyBrown","SandyBrown","Goldenrod","DarkGoldenrod","SaddleBrown"])
         self._used_colors = dict()
 
     def get_unique_color(self, name):
