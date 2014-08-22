@@ -1,3 +1,4 @@
+import os
 import sys
 import logging
 
@@ -21,11 +22,12 @@ from blacklist import BlacklistDialog
 TOPIC_BLACKLIST = ['/clock', '/topology', '/statistics']
 NODE_BLACKLIST = ['/rosout']
 
-# Uncomment the following lines to enable debug printing
-logging.getLogger('diarc').setLevel(logging.DEBUG)
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-logging.getLogger('diarc').addHandler(ch)
+# set this environment variable to enable diarc debug printing 
+if 'DIARC_DEBUG' in os.environ:
+    logging.getLogger('diarc').setLevel(logging.DEBUG)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG)
+    logging.getLogger('diarc').addHandler(ch)
 
 class VisualizerPlugin(Plugin):
     def __init__(self, context):
