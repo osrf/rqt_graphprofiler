@@ -1,7 +1,7 @@
 from python_qt_binding.QtCore import Qt, QMimeData, QPoint, QEvent
 from python_qt_binding.QtGui import QPen, QColor, QSizePolicy, QDrag, QBrush, QGraphicsWidget
 from python_qt_binding.QtGui import QGraphicsView, QGraphicsAnchorLayout, QGraphicsScene
-from python_qt_binding.QtGui import QFontMetrics, QToolTip
+from python_qt_binding.QtGui import QFontMetrics, QToolTip, QPixmap, QImage, QPolygon
 from python_qt_binding.QtCore import pyqtSignal as Signal
 
 from diarc.snapkey import gen_snapkey, parse_snapkey
@@ -168,6 +168,10 @@ class BandSpacer(SpacerContainer.Spacer):
         # non existant band on one side).
         topAltitude = self.topBand.altitude if self.topBand else 0
         bottomAltitude = self.bottomBand.altitude if self.bottomBand else 0
+        # Don't let bands get dragged to adjacent spots (it results in non movement)
+        if data['band'] in [topAltitude, bottomAltitude]:
+            event.setAccepted(False)
+            return
         # Accept a positive altitude band
         if data['band'] > 0 and (topAltitude > 0 or bottomAltitude > 0):
             event.setAccepted(True)
@@ -406,6 +410,12 @@ class BlockSpacer(SpacerContainer.Spacer):
             return
         data = json.loads(str(event.mimeData().text()))
         if 'block' in data:
+            if self.leftBlock and data['block'] == self.leftBlock.block_index:
+                event.setAccepted(False)
+                return
+            if self.rightBlock and data['block'] == self.rightBlock.block_index:
+                event.setAccepted(False)
+                return
             event.setAccepted(True)
             self.dragOver = True
             log.debug("Drag ENTER")
@@ -813,8 +823,9 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
         self.setMaximumHeight(150)
 
         #Create two SnapBandLinks - one for each band
-        self.upLink = SnapBandLink(None)
-        self.downLink = SnapBandLink(None)
+        _is_source = True if container_name == "emitter" else False
+        self.upLink = SnapBandLink(None, is_uplink=True, is_source=_is_source)
+        self.downLink = SnapBandLink(None,is_source=_is_source)
  
     def release(self):
         self.left_snap = None
@@ -867,6 +878,7 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
             l.addAnchor(self, Qt.AnchorRight, self.upLink, Qt.AnchorRight)
             self.upLink.bgcolor = self.posBandItem.bgcolor
             self.upLink.border_color = self.posBandItem.border_color
+            self.upLink.label_color = self.posBandItem.label_color
         else:
             self.upLink.setVisible(False)
             self.upLink.setParent(None)
@@ -880,6 +892,7 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
             l.addAnchor(self, Qt.AnchorRight, self.downLink, Qt.AnchorRight)
             self.downLink.bgcolor = self.negBandItem.bgcolor
             self.downLink.border_color = self.negBandItem.border_color
+            self.downLink.label_color = self.negBandItem.label_color
         else:
             self.downLink.setVisible(False)
             self.downLink.setParent(None)
@@ -933,7 +946,7 @@ class SnapItem(SpacerContainer.Item, QtSnapItemAttributes):
 
 
 class SnapBandLink(QGraphicsWidget, QtBandItemAttributes):
-    def __init__(self,parent):
+    def __init__(self,parent, is_uplink=False, is_source=False):
         super(SnapBandLink,self).__init__(parent=parent)
         QtBandItemAttributes.__init__(self)
         self.setVisible(False)
@@ -942,20 +955,46 @@ class SnapBandLink(QGraphicsWidget, QtBandItemAttributes):
         self.setMinimumWidth(5)
         self.setPreferredHeight(5)
         self.setMinimumHeight(5)
+
+        self._is_uplink = is_uplink
+        self._is_source = is_source
+
  
     def paint(self,painter,option,widget):
         brush = QBrush()
         brush.setStyle(Qt.SolidPattern)
-#         brush.setColor(Qt.white)
         brush.setColor(self.bgcolor)
         painter.fillRect(self.rect(),brush)
         pen = QPen()
-#         pen.setBrush(Qt.red)
         pen.setBrush(self.border_color)
         pen.setStyle(Qt.DashLine)
+        rect = self.rect()
         painter.setPen(pen)
-        painter.drawRect(self.rect())
+        painter.drawRect(rect)
+        # Create arrows
+        arrow_scale = 0.5
+        arrow_width = rect.width()*arrow_scale
+        arrow_height = arrow_width * 0.8
+        arrow_margin = (rect.width()-arrow_width)/2.0
 
+        brush.setColor(self.label_color)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(brush)
+        arrow = None
+        # Determine which direction to draw arrow
+        if (self._is_uplink and self._is_source) or (not self._is_uplink and not self._is_source):
+            # Draw pointing up
+            arrow = QPolygon([QPoint(0,arrow_height), QPoint(arrow_width,arrow_height), QPoint(arrow_width/2.0,0)])
+        else:
+            # Draw pointing down
+            arrow = QPolygon([QPoint(0,0), QPoint(arrow_width,0), QPoint(arrow_width/2.0,arrow_height)])
+
+        # Determine which side to draw arrow on
+        if self._is_uplink:
+            arrow.translate(rect.x()+arrow_margin,rect.y()+rect.height()-arrow_height-arrow_margin)
+        else:
+            arrow.translate(rect.x()+arrow_margin,rect.y()+arrow_margin)
+        painter.drawPolygon(arrow)
 
 class LayoutManagerWidget(QGraphicsWidget):
     """ Holds the actual qt anchoredlayout and top level SpacerContainers """
