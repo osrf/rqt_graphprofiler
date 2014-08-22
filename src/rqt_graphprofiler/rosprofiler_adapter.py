@@ -1,25 +1,30 @@
-import random
-import numpy as np
+import threading
+import copy
 import math
-from threading import *
+import numpy as np
+import random
+
+import rospy
+from ros_statistics_msgs.msg import HostStatistics
+from ros_statistics_msgs.msg import NodeStatistics
+from ros_topology_msgs.msg import Connection
+from ros_topology_msgs.msg import Graph
+from ros_topology_msgs.msg import Node
+from ros_topology_msgs.msg import Service
+from ros_topology_msgs.msg import Topic
+from rosgraph_msgs.msg import TopicStatistics
+
 from diarc import topology
-from diarc.base_adapter import *
-# from diarc.view_attributes import *
+from diarc.base_adapter import BaseAdapter
 from diarc.view import BlockItemAttributes
 from diarc.view import BandItemAttributes
 from diarc.view import SnapItemAttributes
-import copy
-
-import rospy
 import ros_topology as rsg
-from rosgraph_msgs.msg import *
-from ros_topology_msgs.msg import *
-from ros_statistics_msgs.msg import *
+
 
 
 class ColorMapper(object):
     def __init__(self):
-#         self._choices = ["magenta","red","darkMagenta","yellow","darkYellow","blue","darkBlue"]
         self._choices = list()
         # Reds
         self._choices.extend(["IndianRed", "DarkSalmon", "Crimson"])
@@ -90,7 +95,7 @@ class ROSProfileAdapter(BaseAdapter):
         self.topic_statistics_subscriber = rospy.Subscriber('/statistics', TopicStatistics, self._topic_statistics_callback)
         self.host_statistics_subscriber = rospy.Subscriber('/host_statistics', HostStatistics, self._host_statistics_callback)
         self.topology_subscriber = rospy.Subscriber('/topology', Graph, self._topology_callback)
-        self._lock = Lock()
+        self._lock = threading.Lock()
 
         # Timers
         self._stats_timer = rospy.Timer(rospy.Duration(2.0),lambda x: self.statistics_update())
