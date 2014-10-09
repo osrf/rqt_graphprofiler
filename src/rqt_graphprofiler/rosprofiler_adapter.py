@@ -156,34 +156,39 @@ class ROSProfileAdapter(BaseAdapter):
 #         if margin.to_sec() > 0:
 #             rospy.logerr("Data from '%s' too old by %f secs"%(data.node,-margin.to_sec()))
 #             return
-        # If we have not collected any data from this node yet, initialize the node's buffer
-        if data.node not in self._node_statistics_buffer:
-            self._node_statistics_buffer[data.node] = list()
-        self._node_statistics_buffer[data.node].append(data)
+        with self._lock:
+            # If we have not collected any data from this node yet, initialize the node's buffer
+            if data.node not in self._node_statistics_buffer:
+                self._node_statistics_buffer[data.node] = list()
+            self._node_statistics_buffer[data.node].append(data)
 
     def _topic_statistics_callback(self, data):
         """ Buffers TopicStatistics data """
-        # Buffer Topic Statistics Data.
-        if data.topic not in self._topic_statistics_buffer:
-            self._topic_statistics_buffer[data.topic] = list()
-        self._topic_statistics_buffer[data.topic].append(data)
+        with self._lock:
+            # Buffer Topic Statistics Data.
+            if data.topic not in self._topic_statistics_buffer:
+                self._topic_statistics_buffer[data.topic] = list()
+            self._topic_statistics_buffer[data.topic].append(data)
 
     def _host_statistics_callback(self, data):
         """ Buffers HostStatistics data """
-        # This information is useful for drawing NodeStatistics information
-        # in context to nodes running on other machines
-        if data.hostname not in self._host_statistics_buffer:
-            self._host_statistics_buffer[data.hostname] = list()
-        self._host_statistics_buffer[data.hostname].append(data)
+        with self._lock:
+            # This information is useful for drawing NodeStatistics information
+            # in context to nodes running on other machines
+            if data.hostname not in self._host_statistics_buffer:
+                self._host_statistics_buffer[data.hostname] = list()
+            self._host_statistics_buffer[data.hostname].append(data)
 
     def _topology_callback(self, data):
-        self._last_topology_received = copy.copy(data)
+        with self._lock:
+            self._last_topology_received = copy.copy(data)
         if self._auto_update:
             self.topology_update()
 
     def topology_update(self):
         """ Updates the model with current topology information """
-        data = self._last_topology_received
+        with self._lock:
+            data = copy.deepcopy(self._last_topology_received)
 
         # Remove any topics from Ros System Graph not currently known by the profiling system
         rsgTopics = self._topology.topics
@@ -269,13 +274,16 @@ class ROSProfileAdapter(BaseAdapter):
     def statistics_update(self):
         """ Updates the model with current statistics information """
         rospy.logdebug("Updating Statistics")
-        # Combine current buffers with previous buffers for evaluation
-        node_statistics_buffer = dict(self._node_statistics_buffer.items() + self._previous_node_statistics_buffer.items())
-        host_statistics_buffer = dict(self._host_statistics_buffer.items() + self._previous_host_statistics_buffer.items())
-        topic_statistics_buffer = dict(self._topic_statistics_buffer.items() + self._previous_topic_statistics_buffer.items())
+        with self._lock:
+            # Combine current buffers with previous buffers for evaluation
+            node_statistics_buffer = dict(self._node_statistics_buffer.items() + self._previous_node_statistics_buffer.items())
+            host_statistics_buffer = dict(self._host_statistics_buffer.items() + self._previous_host_statistics_buffer.items())
+            topic_statistics_buffer = dict(self._topic_statistics_buffer.items() + self._previous_topic_statistics_buffer.items())
 
-        # TODO: Requires a lock with the callback and other threads
-        rsgNodes = self._topology.nodes
+            # TODO: Requires a lock with the callback and other threads
+            rsgNodes = self._topology.nodes
+            rsgTopics = self._topology.topics
+
         for node_name, data_buffer in node_statistics_buffer.items():
             # Don't process node statistics that we do not have in our internal topology
             # (we don't have a place to store the information).
@@ -317,7 +325,6 @@ class ROSProfileAdapter(BaseAdapter):
         # TODO: These are actually piecewise between individual publishers and subscribers.
         #       Eventually we want to be able to draw each connections individual contribution to the
         #       whole topic, but for now just lump it all together
-        rsgTopics = self._topology.topics
         for topic_name, data_buffer in topic_statistics_buffer.items():
             # Don't process topic statistics that we do not have in our internal topology
             # (We don't have a place to store the information)
