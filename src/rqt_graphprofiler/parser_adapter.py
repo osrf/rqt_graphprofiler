@@ -13,6 +13,8 @@
 # limitations under the License.
 
 from __future__ import print_function
+import xml.dom.minidom
+import xml.etree.ElementTree as ET
 
 from diarc.base_adapter import BaseAdapter
 from diarc.view import BlockItemAttributes
@@ -61,7 +63,11 @@ class ColorMapper(object):
 
 
 class ParserAdapter(BaseAdapter):
-    """ Implements the Adapter interface as a static xml parser. """
+    """ Implements the Adapter interface as a static xml parser. 
+    This is run the by VisualizerWidget defined inside visualizer_plugin.py.
+    It can act as an alternative to rosprofiler_adapter.
+    TODO: the VisualizerWidget still needs to be changed to except this as an option.
+    """
 
     def __init__(self, view):
         super(ParserAdapter, self).__init__(rsg.RosSystemGraph(), view)
@@ -88,7 +94,7 @@ class ParserAdapter(BaseAdapter):
         """ This does nothing since the graph is not actually updating """
         pass
 
-    def disable_auto_update(self)
+    def disable_auto_update(self):
         """ This does nothing since the graph is not actually updating """
         pass
 
@@ -100,6 +106,99 @@ class ParserAdapter(BaseAdapter):
         self._topology.hide_disconnected_snaps = True
         self.topology_update()
 
-#     def topology_update(self):
-#         """ parse the xml file """
-#         with open("input.xml","r") as f:
+    def topology_update(self):
+        """ parse the xml file """
+        # TODO: It would be nice if this happened differentially, like rosprofiler_adapter
+        # does. That way I could change the file and hit refresh and the graph
+        # would change. But to start out just parsing it at all would be a win.
+        root = ET.parse("input.xml").getroot()
+
+        # TODO: The below code - topics show up differently with / vs without the /
+#     ros = RosSystemGraph()
+#     for xmlNode in root.findall("node"):
+#         # Create new node
+#         node = Node(ros)
+#         node.name = xmlNode.attrib["name"].strip()
+#         node.location = xmlNode.attrib["location"].strip()
+#         node.pid = xmlNode.attrib["pid"].strip()
+#         print "Adding Node",node.name
+# 
+#         # Setup Publishers and Subscribers
+#         # Before we can create a connection, we need to add the topic
+#         # to our SystemGraph. 
+#         for xmlTopic in xmlNode.find("topics"):
+#             name = xmlTopic.attrib["name"]
+#             msgType = xmlTopic.attrib["type"]
+#             # Grab existing topic if available 
+#             topic = None
+#             if (name,msgType) not in ros.topics.keys():
+#                 print "Adding Topic ",name,msgType
+#                 topic = Topic(ros)
+#                 topic.name = name
+#                 topic.msgType = msgType
+#             else:
+#                 topic = ros.topics[(name,msgType)]
+#                 
+#             if xmlTopic.tag == "publishes":
+#                 print "Adding publisher",node.name,topic.name
+#                 conn = Publisher(ros,node,topic)
+#             if xmlTopic.tag == "subscribes":
+#                 print "Adding subscriber",node.name,topic.name
+#                 conn = Subscriber(ros,node,topic)
+#             conn.bandwidth = int(xmlTopic.attrib["bw"].strip())
+#             conn.freq = int(xmlTopic.attrib["freq"].strip())
+
+    def statistics_update(self):
+        """ this happens on a timer in rosprofiler_adapter, but that isn't 
+        necessary for this implementation since the file won't change that often.
+        Instead, we just do nothing.
+        TODO: See where this method is called at in other code to make sure this
+        is going to be ok.
+        """
+        pass
+
+
+    def get_block_item_attributes(self, block_index):
+        """ Overloads the BaseAdapters stock implementation of this method """
+        block = self._topology.blocks[block_index]
+        attrs = BlockItemAttributes()
+        attrs.bgcolor = None
+        attrs.border_color = "black"
+        attrs.border_width = 5
+        attrs.label = block.vertex.name
+        attrs.tooltip_text = "Node:\t%s\nCPU:\t%d\nMEM:\t%s\nThreads:\t%d" % (block.vertex.name, block.vertex.cpu_load_mean, sizeof_fmt(block.vertex.virt_mem_mean), block.vertex.num_threads)
+        attrs.label_color = "black"
+#         attrs.spacerwidth = block.vertex.
+        attrs.spacerwidth = 30
+        return attrs
+
+    def get_band_item_attributes(self, band_altitude):
+        """ Overloads the BaseAdapters stock implementation of this method """
+        band = self._topology.bands[band_altitude]
+        attrs = BandItemAttributes()
+        attrs.bgcolor = self._colormapper.get_unique_color(band.edge.name)
+        attrs.border_color = "red"
+        attrs.tooltip_text = "Topic:\t%s\nBw:\t%s/sec\nHz:\t%.1f" % (band.edge.name, sizeof_fmt(band.edge.bw), band.edge.hz)
+        attrs.label = band.edge.name
+        attrs.label_color = "white"
+        attrs.width = 15
+        return attrs
+
+    def get_snap_item_attributes(self, snapkey):
+        """ Default method for providing some stock settings for snaps """
+        attrs = SnapItemAttributes()
+        attrs.bgcolor = "darkCyan" if 'c' in snapkey else "green"
+        attrs.border_color = "darkBlue" if 'c' in snapkey else "darkGreen"
+        attrs.border_width = 1
+        attrs.label = self._topology.snaps[snapkey].connection.edge.name
+        attrs.label_color = "white"
+        attrs.width = 20
+        return attrs
+
+
+def sizeof_fmt(num):
+    # Taken from http://stackoverflow.com/a/1094933
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
