@@ -13,14 +13,19 @@
 # limitations under the License.
 
 from __future__ import print_function
-import xml.dom.minidom
-import xml.etree.ElementTree as ET
+
+import copy
+import random
+
+import rospy
 
 from diarc.base_adapter import BaseAdapter
 from diarc.view import BlockItemAttributes
 from diarc.view import BandItemAttributes
 from diarc.view import SnapItemAttributes
+
 import ros_topology as rsg
+from ros_parser import parse_file
 
 
 class ColorMapper(object):
@@ -69,9 +74,10 @@ class ParserAdapter(BaseAdapter):
     TODO: the VisualizerWidget still needs to be changed to except this as an option.
     """
 
-    def __init__(self, view):
+    def __init__(self, view, filename):
         super(ParserAdapter, self).__init__(rsg.RosSystemGraph(), view)
         self._topology.hide_disconnected_snaps = True
+        self._filename = filename
 
         self._colormapper = ColorMapper()
         self._TOPIC_QUIET_LIST = list()
@@ -111,45 +117,99 @@ class ParserAdapter(BaseAdapter):
         # TODO: It would be nice if this happened differentially, like rosprofiler_adapter
         # does. That way I could change the file and hit refresh and the graph
         # would change. But to start out just parsing it at all would be a win.
-        root = ET.parse("input.xml").getroot()
 
-        # TODO: The below code - topics show up differently with / vs without the /
-#     ros = RosSystemGraph()
-#     for xmlNode in root.findall("node"):
-#         # Create new node
-#         node = Node(ros)
-#         node.name = xmlNode.attrib["name"].strip()
-#         node.location = xmlNode.attrib["location"].strip()
-#         node.pid = xmlNode.attrib["pid"].strip()
-#         print "Adding Node",node.name
-# 
-#         # Setup Publishers and Subscribers
-#         # Before we can create a connection, we need to add the topic
-#         # to our SystemGraph. 
-#         for xmlTopic in xmlNode.find("topics"):
-#             name = xmlTopic.attrib["name"]
-#             msgType = xmlTopic.attrib["type"]
-#             # Grab existing topic if available 
-#             topic = None
-#             if (name,msgType) not in ros.topics.keys():
-#                 print "Adding Topic ",name,msgType
-#                 topic = Topic(ros)
-#                 topic.name = name
-#                 topic.msgType = msgType
-#             else:
-#                 topic = ros.topics[(name,msgType)]
-#                 
-#             if xmlTopic.tag == "publishes":
-#                 print "Adding publisher",node.name,topic.name
-#                 conn = Publisher(ros,node,topic)
-#             if xmlTopic.tag == "subscribes":
-#                 print "Adding subscriber",node.name,topic.name
-#                 conn = Subscriber(ros,node,topic)
-#             conn.bandwidth = int(xmlTopic.attrib["bw"].strip())
-#             conn.freq = int(xmlTopic.attrib["freq"].strip())
+        data = parse_file(self._filename)
+        
+        # Remove any topics from Ros System Graph not currently known by the profiling system
+        rsgTopics = self._topology.topics
+#         allCurrentTopicNames = [t.name for t in data.topics]
+        allCurrentTopicNames = data.topics.keys()
+#         for topic in rsgTopics.values():
+        for name, topic in rsgTopics.items():
+            if name in self._TOPIC_QUIET_LIST:
+                print("Removing Topic", name, "found in quiet list")
+                self._colormapper.release_unique_color(name)
+                topic.release()
+            elif name not in allCurrentTopicNames:
+                print("Removing Topic", name, "not found in ", allCurrentTopicNames)
+                self._colormapper.release_unique_color(name)
+                topic.release()
+
+        # Add any topics not currently in the Ros System Graph
+        for name, topic in data.topics.items():
+            if name not in rsgTopics.keys() and name not in self._TOPIC_QUIET_LIST:
+                new_topic = rsg.Topic(self._topology, topic.name, topic.msgType)
+
+        # Get all the nodes we currently know about
+        rsgNodes = self._topology.nodes
+
+        # Remove any nodes from RosSystemGraph not currently known 
+        allCurrentNodeNames = data.nodes.keys()
+        for name, node in rsgNodes.items():
+            if name in self._NODE_QUIET_LIST:
+                print("Removing node", name, "found on quiet list")
+                node.release()
+            elif name not in allCurrentNodeNames:
+                print("Removing Node", name, "not found in ", allCurrentNodeNames)
+                node.release()
+                # TODO: Remove any of the nodes publishers or subscribers now
+
+        # Add any nodes not currently in the Ros System Graph
+        for node in data.nodes.values():
+            # Skip any nodes that are on the quiet list
+            if node.name in self._NODE_QUIET_LIST:
+                continue
+            rsg_node = None
+            if node.name not in rsgNodes:  # and name not in QUIET_NAMES:
+                rsg_node = rsg.Node(self._topology, node.name)
+                rsg_node.location = node.location
+            else:
+                rsg_node = self._topology.nodes[node.name]
+                if not rsg_node.location == node.location:
+                    rospy.logerr("rsg_node and data.node uri's do not match for name %s" % node.name)
+
+            # Filter published and subscribed topics we are ignoring
+#             publishes_list = [p for p in node.publishes if p not in self._TOPIC_QUIET_LIST]
+            publishes_list = [p.topic.name for p in node.publishers
+                              if p.topic.name not in self._TOPIC_QUIET_LIST]
+            subscribes_list = [s.topic.name for s in node.subscribers
+                               if s.topic.name not in self._TOPIC_QUIET_LIST]
+
+            # Add and remove publishers for this node only
+            # Compile two dictionaries, one of existing topics and one of the most recently
+            # reported topics. Remove existing publishers that are not mentioned in the
+            # current list, add publishers that not in the existing list but in the current list,
+            # and update publishers that occur in both lists.
+            existing_rsg_node_pub_topics = dict([(publisher.topic.name, publisher)
+                                                 for publisher in rsg_node.publishers])
+            current_node_prof_pub_topics = dict([(topic_name, self._topology.topics[topic_name])
+                                                 for topic_name in publishes_list])
+            for existing_topic_name in existing_rsg_node_pub_topics.keys():
+                # Remove Publisher
+                if existing_topic_name not in current_node_prof_pub_topics.keys():
+                    existing_rsg_node_pub_topics[existing_topic_name].release()
+            for current_topic_name in current_node_prof_pub_topics.keys():
+                # Add Publisher
+                if current_topic_name not in existing_rsg_node_pub_topics.keys():
+                    publisher = rsg.Publisher(self._topology, rsg_node, current_node_prof_pub_topics[current_topic_name])
+
+            # Add and remove subscribers for this node only.
+            # This follows the same patteren as the publishers above.
+            existing_rsg_node_sub_topics = dict([(subscriber.topic.name, subscriber) for subscriber in rsg_node.subscribers])
+            current_node_prof_sub_topics = dict([(topic_name, self._topology.topics[topic_name]) for topic_name in subscribes_list])
+            for existing_topic_name in existing_rsg_node_sub_topics.keys():
+                # Remove Subscriber
+                if existing_topic_name not in current_node_prof_sub_topics.keys():
+                    existing_rsg_node_sub_topics[existing_topic_name].release()
+            for current_topic_name in current_node_prof_sub_topics.keys():
+                # Add Subscriber
+                if current_topic_name not in existing_rsg_node_sub_topics.keys():
+                    subscriber = rsg.Subscriber(self._topology, rsg_node, current_node_prof_sub_topics[current_topic_name])
+
+        self._update_view()
 
     def statistics_update(self):
-        """ this happens on a timer in rosprofiler_adapter, but that isn't 
+        """ this happens on a timer in rosprofiler_adapter, but that isn't
         necessary for this implementation since the file won't change that often.
         Instead, we just do nothing.
         TODO: See where this method is called at in other code to make sure this
