@@ -206,7 +206,7 @@ class ROSProfileAdapter(BaseAdapter):
         # Add any topics not currently in the Ros System Graph
         for topic in data.topics:
             if topic.name not in rsgTopics and topic.name not in self._TOPIC_QUIET_LIST:
-                topic = rsg.Topic(self._topology, topic.name, topic.type)
+                new_topic = rsg.Topic(self._topology, topic.name, topic.type)
 
         # Get all the nodes we currently know about
         rsgNodes = self._topology.nodes
