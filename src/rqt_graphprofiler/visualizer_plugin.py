@@ -27,6 +27,7 @@ from python_qt_binding.QtGui import QWidget
 
 from qt_gui.plugin import Plugin
 import rosprofiler_adapter
+import parser_adapter
 
 from diarc import qt_view
 
@@ -51,12 +52,21 @@ class VisualizerPlugin(Plugin):
         # Process standalone plugin command-line arguments
         from argparse import ArgumentParser
         parser = ArgumentParser()
+        VisualizerPlugin.add_arguments(parser)
         # Add argument(s) to the parser.
-        parser.add_argument("-q", "--quiet", action="store_true",
-                            dest="quiet", help="Put plugin in silent mode")
-        args, unknowns = parser.parse_known_args(context.argv())
+#         parser.add_argument("-q", "--quiet", action="store_true",
+#                             dest="quiet", help="Put plugin in silent mode")
+#         parser.add_argument("-f", "--fake", action="store",
+#                             dest="fake_input", help="Fake input using specified xml file")
+#         args, unknowns = parser.parse_known_args(context.argv())
+        args = parser.parse_args(context.argv())
+        context.add_widget(VisualizerWidget(args))
 
-        context.add_widget(VisualizerWidget())
+    @staticmethod
+    def add_arguments(parser):
+        group = parser.add_argument_group("rqt_graphprofiler options")
+        group.add_argument("-f", "--fake", action="store",
+                            dest="fake_input", help="Fake input using specified xml file")
 
     def shutdown_plugin(self):
         pass
@@ -69,7 +79,7 @@ class VisualizerPlugin(Plugin):
 
 
 class VisualizerWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, args, parent=None):
         super(VisualizerWidget, self).__init__(parent)
         self.setWindowTitle('Graph Profiler Visualizer')
         vbox = QVBoxLayout()
@@ -101,7 +111,13 @@ class VisualizerWidget(QWidget):
 
         # Initialize the Visualizer
         self._view = qt_view.QtView()
-        self._adapter = rosprofiler_adapter.ROSProfileAdapter(self._view)
+        if args.fake_input:
+            import os
+            print("Using xml input from directory", os.getcwd())
+            self._adapter = parser_adapter.ParserAdapter(self._view, args.fake_input)
+        else:
+            print("Using regular input")
+            self._adapter = rosprofiler_adapter.ROSProfileAdapter(self._view)
         self._adapter.set_topic_quiet_list(TOPIC_BLACKLIST)
         self._adapter.set_node_quiet_list(NODE_BLACKLIST)
         vbox.addWidget(self._view)
