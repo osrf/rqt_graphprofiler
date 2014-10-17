@@ -2,6 +2,12 @@
 Changelog for package rqt_graphprofiler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* removes std_msgs from CMakeLists (it does not have a build_depend in
+  package.xml)
+* Contributors: dan brooks
+
 0.1.1 (2014-10-17)
 ------------------
 * deactivates nosetest because of broken dep on flake8
