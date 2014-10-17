@@ -2,8 +2,8 @@
 Changelog for package rqt_graphprofiler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.2 (2014-10-17)
+------------------
 * removes std_msgs from CMakeLists (it does not have a build_depend in
   package.xml)
 * Contributors: dan brooks

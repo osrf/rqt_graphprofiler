@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>rqt_graphprofiler</name>
-  <version>0.1.1</version>
+  <version>0.1.2</version>
   <description>
       An experimental visualization system for anonymous publish subscribe architectures.
   </description>
