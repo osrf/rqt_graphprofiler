@@ -4,7 +4,6 @@ project(rqt_graphprofiler)
 find_package(catkin REQUIRED COMPONENTS
 #   message_generation
   genmsg
-  std_msgs
 )
 
 catkin_python_setup()
