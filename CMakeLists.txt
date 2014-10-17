@@ -31,4 +31,4 @@ install(PROGRAMS scripts/rqt_graphprofiler
 install(FILES plugin.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
-catkin_add_nosetests(test)
+# catkin_add_nosetests(test)

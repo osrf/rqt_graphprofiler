@@ -28,6 +28,10 @@
   <run_depend>rqt_gui_py</run_depend>
   <run_depend>std_msgs</run_depend>
 
+  <!-- Uncomment this after it gets added to rosdep 
+  <test_depend>python-flake8</test_depend>
+  -->
+
   <export>
       <architecture_independent/>
       <rqt_gui plugin="${prefix}/plugin.xml"/>
